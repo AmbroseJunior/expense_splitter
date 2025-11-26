@@ -120,7 +120,9 @@ project-root/
 ![Use-Case Diagram](assets/dpu.png)
 
 # 🌐 ER Diagram
-!-------Caksy tu dodaj png od diagrama 
+<img width="498" height="657" alt="klyraerpb" src="https://github.com/user-attachments/assets/f3d232eb-b53f-4f38-8829-470488fa593d" />
+
+<img width="701" height="961" alt="Klyra drawio" src="https://github.com/user-attachments/assets/7d0d592d-fa1e-49c5-9d2b-a12a215e56f0" />
 
 # 🔽 Namestitev
 - Kloniranje repozitorija:

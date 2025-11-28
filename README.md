@@ -117,7 +117,7 @@ project-root/
 ```
 
 # 🧩 Use-Case Diagram
-![Use-Case Diagram](assets/dpu.png)
+![Use-Case Diagram](dokumentacija/assets/dpu.png)
 
 # 🌐 ER Diagram
 <img width="498" height="657" alt="klyraerpb" src="https://github.com/user-attachments/assets/f3d232eb-b53f-4f38-8829-470488fa593d" />

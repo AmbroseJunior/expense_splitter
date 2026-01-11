@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:expense_splitter/screens/dashboard_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:expense_splitter/providers/auth_provider.dart';
 import 'package:expense_splitter/screens/registration_screen.dart';
+import 'package:expense_splitter/widgets/ui_feedback.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,31 +17,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 // LOGO
                 Container(
                   padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [Color(0xFF0097A7), Color(0xFF006A6A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
                     ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 12,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
                   ),
                   child: const Icon(
                     Icons.receipt_long,
@@ -50,41 +44,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 25),
 
-                // TITLE
                 Text(
                   "Smart Expense Splitter",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF006A6A),
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF006A6A),
+                      ),
                 ),
 
                 const SizedBox(height: 35),
 
-                // EMAIL
                 TextField(
                   controller: emailCtrl,
-                  decoration: const InputDecoration(
-                    labelText: "Email",
-                    filled: true,
-                  ),
+                  decoration: const InputDecoration(labelText: "Email"),
                 ),
-
                 const SizedBox(height: 16),
 
-                // PASSWORD
                 TextField(
                   controller: passCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: "Password",
-                    filled: true,
-                  ),
+                  decoration: const InputDecoration(labelText: "Password"),
                 ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 20),
 
-                // REGISTER BUTTON (ALWAYS VISIBLE NOW)
+                // REGISTER LINK
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -94,42 +78,86 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     );
                   },
-                  child: const Text(
-                    "Don't have an account? Register",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF006A6A),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: const Text("Don't have an account? Register"),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
                 // LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF006A6A),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DashboardScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text("Login"),
+                    onPressed: auth.isLoading
+                        ? null
+                        : () async {
+                            if (emailCtrl.text.isEmpty ||
+                                passCtrl.text.isEmpty) {
+                              UIFeedback.showSnack(
+                                context,
+                                "Please fill in all fields.",
+                              );
+                              return;
+                            }
+
+                            await auth.login(
+                              emailCtrl.text,
+                              passCtrl.text,
+                            );
+
+                            if (auth.error != null) {
+                              UIFeedback.showDialogBox(
+                                context,
+                                title: "Login Failed",
+                                message: auth.error!,
+                              );
+                            }
+                          },
+                    child: auth.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text("Login"),
                   ),
                 ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.login),
+                  label: const Text("Sign in with Google"),
+                  onPressed: auth.isLoading
+                      ? null
+                      : () async {
+                          await auth.loginWithGoogle();
 
-                const SizedBox(height: 40),
+                          if (auth.error != null) {
+                            UIFeedback.showDialogBox(
+                              context,
+                              title: "Google Login Failed",
+                              message: auth.error!,
+                            );
+                          }
+                        },
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: auth.isLoading
+                      ? null
+                      : () async {
+                          await auth.loginAnonymously();
+
+                          if (auth.error != null) {
+                            UIFeedback.showDialogBox(
+                              context,
+                              title: "Guest Login Failed",
+                              message: auth.error!,
+                            );
+                          }
+                        },
+                  child: const Text("Continue as Guest"),
+                ),
               ],
             ),
           ),

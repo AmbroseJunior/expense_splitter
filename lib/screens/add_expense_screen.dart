@@ -17,7 +17,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Add Expense")),
-
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -45,7 +44,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField(
-                        value: payer,
+                        initialValue: payer,
                         items: ["Matej", "Miha", "Nnamdi"]
                             .map(
                               (m) => DropdownMenuItem(value: m, child: Text(m)),
@@ -58,7 +57,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                 ),
               ),
-
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(

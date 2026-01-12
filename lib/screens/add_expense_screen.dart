@@ -38,7 +38,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       );
     }
 
-    // plačnik default: prvi član v grupi
     payer ??= group.members.first;
 
     return Scaffold(

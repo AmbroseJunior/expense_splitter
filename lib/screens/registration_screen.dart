@@ -16,6 +16,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Create Account")),
       body: Center(
@@ -26,36 +28,31 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.person_add,
                     size: 80,
-                    color: Color(0xFF006A6A),
+                    color: cs.primary,
                   ),
                   const SizedBox(height: 20),
-
                   Text(
                     "Join Smart Expense Splitter",
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF006A6A),
-                    ),
+                          fontWeight: FontWeight.bold,
+                          color: cs.primary,
+                        ),
                   ),
-
                   const SizedBox(height: 30),
-
                   TextField(
                     controller: emailCtrl,
                     decoration: const InputDecoration(labelText: "Email"),
                   ),
                   const SizedBox(height: 16),
-
                   TextField(
                     controller: passCtrl,
                     obscureText: true,
                     decoration: const InputDecoration(labelText: "Password"),
                   ),
                   const SizedBox(height: 16),
-
                   TextField(
                     controller: confirmCtrl,
                     obscureText: true,
@@ -63,14 +60,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       labelText: "Confirm Password",
                     ),
                   ),
-
                   const SizedBox(height: 25),
-
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: cs.primary,
+                        foregroundColor: Colors.white,
+                      ),
                       onPressed: () {
-                        // Later: Firebase registration validation
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
@@ -81,7 +79,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       child: const Text("Create Account"),
                     ),
                   ),
-
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacement(
@@ -89,7 +86,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
-                    child: const Text("Already have an account? Login"),
+                    child: Text(
+                      "Already have an account? Login",
+                      style: TextStyle(color: cs.primary),
+                    ),
                   ),
                 ],
               ),

@@ -15,6 +15,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -23,13 +25,12 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // LOGO
                 Container(
                   padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0097A7), Color(0xFF006A6A)],
+                    gradient: LinearGradient(
+                      colors: [cs.secondary, cs.primary],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -47,21 +48,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     size: 70,
                   ),
                 ),
-
                 const SizedBox(height: 25),
-
-                // TITLE
                 Text(
                   "Smart Expense Splitter",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF006A6A),
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: cs.primary,
+                      ),
                 ),
-
                 const SizedBox(height: 35),
-
-                // EMAIL
                 TextField(
                   controller: emailCtrl,
                   decoration: const InputDecoration(
@@ -69,10 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     filled: true,
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // PASSWORD
                 TextField(
                   controller: passCtrl,
                   obscureText: true,
@@ -81,10 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     filled: true,
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
-                // REGISTER BUTTON (ALWAYS VISIBLE NOW)
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -94,24 +83,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     "Don't have an account? Register",
                     style: TextStyle(
                       fontSize: 16,
-                      color: Color(0xFF006A6A),
+                      color: cs.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF006A6A),
+                      backgroundColor: cs.primary,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -128,7 +115,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text("Login"),
                   ),
                 ),
-
                 const SizedBox(height: 40),
               ],
             ),

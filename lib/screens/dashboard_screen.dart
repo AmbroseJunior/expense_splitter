@@ -3,6 +3,8 @@ import 'group_list_screen.dart';
 import 'login_screen.dart';
 import 'add_expense_screen.dart';
 import 'summary_chart.dart';
+import 'people_screen.dart';
+
 
 
 class DashboardScreen extends StatelessWidget {
@@ -41,18 +43,19 @@ class DashboardScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, color: Colors.grey[700]),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             DashboardButton(
-              icon: Icons.group,
-              label: "View Your Groups",
+              icon: Icons.people,
+              label: "Manage People",
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const GroupListScreen()),
+                  MaterialPageRoute(builder: (_) => const PeopleScreen()),
                 );
               },
             ),
+
 
             const SizedBox(height: 20),
 
@@ -71,7 +74,6 @@ class DashboardScreen extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            // SUMMARY CHART PLACEHOLDER
             const Text(
               "Summary Overview",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -98,7 +100,6 @@ class DashboardScreen extends StatelessWidget {
 
             const Spacer(),
 
-            // FOOTER
             const Center(
               child: Text(
                 "Powered By: expense_splitter 2025",

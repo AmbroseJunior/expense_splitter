@@ -5,7 +5,8 @@ import '../state/expense_store.dart';
 import '../models/user.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final String groupId; // obvezno: dodajamo v določeno grupo
+  const AddExpenseScreen({super.key, required this.groupId});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -28,10 +29,20 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ExpenseStore>();
-    payer ??= store.users.first;
+    final group = store.getGroupById(widget.groupId);
+
+    if (group == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text("Add Expense")),
+        body: const Center(child: Text("Group not found")),
+      );
+    }
+
+    // plačnik default: prvi član v grupi
+    payer ??= group.members.first;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Add Expense")),
+      appBar: AppBar(title: Text("Add Expense (${group.name})")),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -45,35 +56,24 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     children: [
                       TextField(
                         controller: titleCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "Expense title",
-                        ),
+                        decoration: const InputDecoration(labelText: "Expense title"),
                       ),
                       const SizedBox(height: 16),
 
                       TextField(
                         controller: amountCtrl,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
-                          labelText: "Amount (€)",
-                        ),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: "Amount (€)"),
                       ),
                       const SizedBox(height: 16),
 
                       DropdownButtonFormField<AppUser>(
                         value: payer,
-                        items: store.users
-                            .map(
-                              (u) => DropdownMenuItem(
-                                value: u,
-                                child: Text(u.name),
-                              ),
-                            )
+                        items: group.members
+                            .map((u) => DropdownMenuItem(value: u, child: Text(u.name)))
                             .toList(),
                         onChanged: (v) => setState(() => payer = v),
-                        decoration:
-                            const InputDecoration(labelText: "Paid by"),
+                        decoration: const InputDecoration(labelText: "Paid by"),
                       ),
 
                       const SizedBox(height: 16),
@@ -84,9 +84,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-
                       const SizedBox(height: 8),
-                      ...store.users.map((u) {
+
+                      ...group.members.map((u) {
                         final checked = selectedUserIds.contains(u.id);
                         return CheckboxListTile(
                           dense: true,
@@ -119,33 +119,27 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                   ),
                   onPressed: () {
                     final title = titleCtrl.text.trim();
-                    final amount = double.tryParse(
-                      amountCtrl.text.replaceAll(',', '.'),
-                    );
+                    final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
 
                     if (title.isEmpty || amount == null || amount <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Enter valid title and amount"),
-                        ),
+                        const SnackBar(content: Text("Enter valid title and amount")),
                       );
                       return;
                     }
 
                     if (selectedUserIds.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Select at least one person"),
-                        ),
+                        const SnackBar(content: Text("Select at least one person")),
                       );
                       return;
                     }
 
-                    final sharedWith = store.users
-                        .where((u) => selectedUserIds.contains(u.id))
-                        .toList();
+                    final sharedWith =
+                        group.members.where((u) => selectedUserIds.contains(u.id)).toList();
 
-                    context.read<ExpenseStore>().addExpense(
+                    context.read<ExpenseStore>().addExpenseToGroup(
+                          groupId: widget.groupId,
                           title: title,
                           amount: amount,
                           date: DateTime.now(),

@@ -60,11 +60,12 @@ class DashboardScreen extends StatelessWidget {
             icon: Icons.add_card,
             label: "Add New Expense",
                 onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
-    );
-  },
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GroupListScreen()),
+          );
+        },
+
 ),
 
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'group_list_screen.dart';
 import 'login_screen.dart';
 import 'add_expense_screen.dart';
+import 'summary_chart.dart';
 
 
 class DashboardScreen extends StatelessWidget {
@@ -77,26 +78,22 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 12),
 
             Container(
-              height: 140,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: const Center(
-                child: Text(
-                  "📊 Chart Coming Soon",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
-            ),
+                  child: const SummaryChart(),
+),
+
 
             const Spacer(),
 

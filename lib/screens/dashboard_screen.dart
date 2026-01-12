@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'group_list_screen.dart';
 import 'login_screen.dart';
+import 'add_expense_screen.dart';
+
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -54,10 +56,16 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             DashboardButton(
-              icon: Icons.add_card,
-              label: "Add New Expense",
-              onTap: () {},
-            ),
+            icon: Icons.add_card,
+            label: "Add New Expense",
+                onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+    );
+  },
+),
+
 
             const SizedBox(height: 40),
 

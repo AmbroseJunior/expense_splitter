@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'screens/login_screen.dart';
 import 'theme.dart';
+import 'state/expense_store.dart';
 
 void main() {
-  runApp(const ExpenseSplitterApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ExpenseStore(),
+      child: const ExpenseSplitterApp(),
+    ),
+  );
 }
 
 class ExpenseSplitterApp extends StatelessWidget {

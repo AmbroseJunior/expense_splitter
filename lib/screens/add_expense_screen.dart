@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../state/expense_store.dart';
+import '../models/user.dart';
 
 class AddExpenseScreen extends StatefulWidget {
   const AddExpenseScreen({super.key});
@@ -10,14 +14,24 @@ class AddExpenseScreen extends StatefulWidget {
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final titleCtrl = TextEditingController();
   final amountCtrl = TextEditingController();
-  String payer = "Matej";
-  List<String> selectedMembers = ["Matej", "Miha", "Nnamdi"];
+
+  AppUser? payer;
+  final Set<String> selectedUserIds = {};
+
+  @override
+  void dispose() {
+    titleCtrl.dispose();
+    amountCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final store = context.watch<ExpenseStore>();
+    payer ??= store.users.first;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Add Expense")),
-
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -36,24 +50,59 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+
                       TextField(
                         controller: amountCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
                         decoration: const InputDecoration(
                           labelText: "Amount (€)",
                         ),
                       ),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField(
+
+                      DropdownButtonFormField<AppUser>(
                         value: payer,
-                        items: ["Matej", "Miha", "Nnamdi"]
+                        items: store.users
                             .map(
-                              (m) => DropdownMenuItem(value: m, child: Text(m)),
+                              (u) => DropdownMenuItem(
+                                value: u,
+                                child: Text(u.name),
+                              ),
                             )
                             .toList(),
-                        onChanged: (v) => setState(() => payer = v!),
-                        decoration: const InputDecoration(labelText: "Paid by"),
+                        onChanged: (v) => setState(() => payer = v),
+                        decoration:
+                            const InputDecoration(labelText: "Paid by"),
                       ),
+
+                      const SizedBox(height: 16),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Shared with:",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+                      ...store.users.map((u) {
+                        final checked = selectedUserIds.contains(u.id);
+                        return CheckboxListTile(
+                          dense: true,
+                          value: checked,
+                          title: Text(u.name),
+                          onChanged: (v) {
+                            setState(() {
+                              if (v == true) {
+                                selectedUserIds.add(u.id);
+                              } else {
+                                selectedUserIds.remove(u.id);
+                              }
+                            });
+                          },
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -68,7 +117,44 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    final title = titleCtrl.text.trim();
+                    final amount = double.tryParse(
+                      amountCtrl.text.replaceAll(',', '.'),
+                    );
+
+                    if (title.isEmpty || amount == null || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Enter valid title and amount"),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (selectedUserIds.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Select at least one person"),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final sharedWith = store.users
+                        .where((u) => selectedUserIds.contains(u.id))
+                        .toList();
+
+                    context.read<ExpenseStore>().addExpense(
+                          title: title,
+                          amount: amount,
+                          date: DateTime.now(),
+                          paidBy: payer!,
+                          sharedWith: sharedWith,
+                        );
+
+                    Navigator.pop(context);
+                  },
                   child: const Text("Save Expense"),
                 ),
               ),

@@ -6,7 +6,11 @@ class GroupListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final groups = ["Roommates", "Trip to Paris", "Project Team"];
+    final groups = [
+      {"id": "roommates", "name": "Roommates"},
+      {"id": "trip-paris", "name": "Trip to Paris"},
+      {"id": "project-team", "name": "Project Team"},
+    ];
 
     return Scaffold(
       appBar: AppBar(title: const Text("Your Groups")),
@@ -24,6 +28,7 @@ class GroupListScreen extends StatelessWidget {
           itemCount: groups.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
+            final group = groups[index];
             return Card(
               color: Colors.white,
               child: ListTile(
@@ -37,7 +42,7 @@ class GroupListScreen extends StatelessWidget {
                   child: const Icon(Icons.group, color: Color(0xFF006A6A)),
                 ),
                 title: Text(
-                  groups[index],
+                  group["name"] as String,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -52,7 +57,10 @@ class GroupListScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          GroupDetailsScreen(groupName: groups[index]),
+                          GroupDetailsScreen(
+                        groupId: group["id"] as String,
+                        groupName: group["name"] as String,
+                      ),
                     ),
                   );
                 },

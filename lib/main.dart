@@ -7,33 +7,45 @@ import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'theme.dart';
+import 'services/expense_repository.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  var firebaseAvailable = true;
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (_) {
+    firebaseAvailable = false;
+  }
 
-  runApp(const ExpenseSplitterApp());
+  ExpenseRepository.instance.setSyncEnabled(firebaseAvailable);
+
+  runApp(ExpenseSplitterApp(firebaseAvailable: firebaseAvailable));
 }
 
 class ExpenseSplitterApp extends StatelessWidget {
-  const ExpenseSplitterApp({super.key});
+  final bool firebaseAvailable;
+
+  const ExpenseSplitterApp({super.key, required this.firebaseAvailable});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AuthProvider>(
-      create: (_) => AuthProvider(),
+      create: (_) => AuthProvider(enableFirebase: firebaseAvailable),
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Expense Splitter',
             theme: buildTheme(),
-            home: auth.user == null
-                ? const LoginScreen()
-                : const DashboardScreen(),
+            home: firebaseAvailable
+                ? (auth.user == null
+                    ? const LoginScreen()
+                    : const DashboardScreen())
+                : const DashboardScreen(localOnly: true),
           );
         },
       ),

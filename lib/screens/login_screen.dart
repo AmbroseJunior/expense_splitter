@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:expense_splitter/providers/auth_provider.dart';
 import 'package:expense_splitter/screens/registration_screen.dart';
+import 'package:expense_splitter/screens/dashboard_screen.dart';
 import 'package:expense_splitter/widgets/ui_feedback.dart';
+import 'package:expense_splitter/services/expense_repository.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -157,6 +159,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         },
                   child: const Text("Continue as Guest"),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: auth.isLoading
+                      ? null
+                      : () {
+                          ExpenseRepository.instance.setSyncEnabled(false);
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const DashboardScreen(localOnly: true),
+                            ),
+                          );
+                        },
+                  child: const Text("Continue offline (SQLite only)"),
                 ),
               ],
             ),

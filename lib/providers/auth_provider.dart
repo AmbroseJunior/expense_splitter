@@ -3,17 +3,32 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final AuthService? _authService;
+  final bool firebaseEnabled;
 
   User? user;
   bool isLoading = false;
   String? error;
 
-  AuthProvider() {
-    _authService.authStateChanges().listen((firebaseUser) {
-      user = firebaseUser;
+  AuthProvider({bool enableFirebase = true})
+      : firebaseEnabled = enableFirebase,
+        _authService = enableFirebase ? AuthService() : null {
+    if (enableFirebase) {
+      _authService!.authStateChanges().listen((firebaseUser) {
+        user = firebaseUser;
+        notifyListeners();
+      });
+    }
+  }
+
+  bool _requireFirebase() {
+    if (!firebaseEnabled || _authService == null) {
+      error = "Firebase is disabled in local-only mode.";
+      isLoading = false;
       notifyListeners();
-    });
+      return false;
+    }
+    return true;
   }
 
   Future<void> register(String name, String email, String password) async {
@@ -22,7 +37,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.register(name, email, password);
+      if (!_requireFirebase()) return;
+      await _authService!.register(name, email, password);
     } on FirebaseAuthException catch (e) {
       // THIS gives real, human-readable messages
       error = e.message ?? "Registration failed.";
@@ -40,7 +56,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.login(email, password);
+      if (!_requireFirebase()) return;
+      await _authService!.login(email, password);
     } on FirebaseAuthException catch (e) {
       error = e.message ?? "Login failed.";
     } catch (e) {
@@ -57,7 +74,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.signInWithGoogle();
+      if (!_requireFirebase()) return;
+      await _authService!.signInWithGoogle();
     } catch (e) {
       error = "Google sign-in failed.";
     } finally {
@@ -67,7 +85,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logoutAfterRegister() async {
-    await _authService.logout();
+    if (!firebaseEnabled || _authService == null) return;
+    await _authService!.logout();
   }
 
   Future<void> loginAnonymously() async {
@@ -76,7 +95,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.signInAnonymously();
+      if (!_requireFirebase()) return;
+      await _authService!.signInAnonymously();
     } catch (e) {
       error = "Anonymous login failed.";
     } finally {
@@ -86,6 +106,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _authService.logout();
+    if (!firebaseEnabled || _authService == null) return;
+    await _authService!.logout();
   }
 }

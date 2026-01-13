@@ -4,7 +4,9 @@ import 'package:expense_splitter/providers/auth_provider.dart';
 import 'group_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final bool localOnly;
+
+  const DashboardScreen({super.key, this.localOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -20,15 +22,17 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Welcome"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await auth.logout();
-              // main.dart auth listener will redirect to LoginScreen
-            },
-          ),
-        ],
+        actions: localOnly
+            ? null
+            : [
+                IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: () async {
+                    await auth.logout();
+                    // main.dart auth listener will redirect to LoginScreen
+                  },
+                ),
+              ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -70,6 +74,24 @@ class DashboardScreen extends StatelessWidget {
               ),
             ],
 
+            if (localOnly) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  "Local-only mode: data is saved in SQLite and sync is disabled.",
+                  style: TextStyle(
+                    color: Colors.blueGrey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 30),
 
             // 📁 Groups
@@ -92,7 +114,14 @@ class DashboardScreen extends StatelessWidget {
             DashboardButton(
               icon: Icons.add_card,
               label: "Add New Expense",
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const GroupListScreen(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 40),

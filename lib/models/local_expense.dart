@@ -26,7 +26,8 @@ SplitMethod splitMethodFromString(String value) {
 }
 
 class LocalExpense {
-  final int? id;
+  final String id;
+  final String ownerId;
   final String groupId;
   final String title;
   final double amount;
@@ -38,7 +39,8 @@ class LocalExpense {
   final bool pendingSync;
 
   LocalExpense({
-    this.id,
+    required this.id,
+    required this.ownerId,
     required this.groupId,
     required this.title,
     required this.amount,
@@ -53,6 +55,7 @@ class LocalExpense {
   Map<String, dynamic> toDbMap() {
     return {
       'id': id,
+      'ownerId': ownerId,
       'groupId': groupId,
       'title': title,
       'amount': amount,
@@ -66,18 +69,36 @@ class LocalExpense {
   }
 
   factory LocalExpense.fromDbMap(Map<String, dynamic> map) {
+    final rawParticipants = map['participants'];
+    final rawShares = map['shares'];
+    final rawSplitMethod = map['splitMethod'];
+
+    final participants = (rawParticipants == null || rawParticipants == 'null')
+        ? <String>[]
+        : (jsonDecode(rawParticipants as String) as List)
+            .map((e) => e.toString())
+            .toList();
+
+    final decodedShares = (rawShares == null || rawShares == 'null')
+        ? <String, dynamic>{}
+        : (jsonDecode(rawShares as String) as Map<String, dynamic>);
+
+    final splitMethod = (rawSplitMethod == null)
+        ? SplitMethod.equal
+        : splitMethodFromString(rawSplitMethod as String);
+
     return LocalExpense(
-      id: map['id'] as int?,
+      id: map['id'] as String,
+      ownerId: map['ownerId'] as String,
       groupId: map['groupId'] as String,
       title: map['title'] as String,
       amount: (map['amount'] as num).toDouble(),
       payerId: map['payerId'] as String,
-      participants: (jsonDecode(map['participants'] as String) as List)
-          .map((e) => e.toString())
-          .toList(),
-      shares: (jsonDecode(map['shares'] as String) as Map<String, dynamic>)
-          .map((key, value) => MapEntry(key, (value as num).toDouble())),
-      splitMethod: splitMethodFromString(map['splitMethod'] as String),
+      participants: participants,
+      shares: decodedShares.map(
+        (key, value) => MapEntry(key, (value as num).toDouble()),
+      ),
+      splitMethod: splitMethod,
       createdAt:
           DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int? ?? 0),
       pendingSync: (map['pendingSync'] as int? ?? 0) == 1,

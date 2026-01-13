@@ -6,11 +6,15 @@ Map<String, double> calculateNet(List<AppUser> users, List<Expense> expenses) {
   final map = {for (var u in users) u.id: 0.0};
 
   for (final e in expenses) {
-    final share = e.amount / e.sharedWith.length;
-
     map[e.paidBy.id] = map[e.paidBy.id]! + e.amount;
 
+    final hasShares = e.shares.isNotEmpty;
+    final fallbackShare = e.sharedWith.isEmpty
+        ? 0.0
+        : e.amount / e.sharedWith.length;
+
     for (final u in e.sharedWith) {
+      final share = hasShares ? (e.shares[u.id] ?? fallbackShare) : fallbackShare;
       map[u.id] = map[u.id]! - share;
     }
   }

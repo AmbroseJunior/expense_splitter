@@ -44,6 +44,7 @@ class FirestoreService {
     required String payerId,
     required List<String> participants,
     required Map<String, double> shares,
+    String? splitMethod,
   }) async {
     await _db.collection('groups').doc(groupId).collection('expenses').add({
       'title': title,
@@ -51,6 +52,7 @@ class FirestoreService {
       'payerId': payerId,
       'participants': participants,
       'shares': shares,
+      if (splitMethod != null) 'splitMethod': splitMethod,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }

@@ -19,12 +19,15 @@ class ExpenseRepository {
     _syncEnabled = enabled;
   }
 
-  Future<List<LocalExpense>> listExpenses({required String groupId}) async {
+  Future<List<LocalExpense>> listExpenses({
+    required String ownerId,
+    required String groupId,
+  }) async {
     final db = await _localDb.database;
     final rows = await db.query(
       'expenses',
-      where: 'groupId = ?',
-      whereArgs: [groupId],
+      where: 'ownerId = ? AND groupId = ?',
+      whereArgs: [ownerId, groupId],
       orderBy: 'createdAt DESC',
     );
     return rows.map(LocalExpense.fromDbMap).toList();
@@ -32,22 +35,22 @@ class ExpenseRepository {
 
   Future<int> addExpense(LocalExpense expense, {bool trySync = true}) async {
     final db = await _localDb.database;
-    final id = await db.insert('expenses', expense.toDbMap());
+    await db.insert('expenses', expense.toDbMap());
     if (trySync && _syncEnabled) {
-      await syncPendingExpenses();
+      await syncPendingExpenses(ownerId: expense.ownerId);
     }
-    return id;
+    return 1;
   }
 
-  Future<void> syncPendingExpenses() async {
+  Future<void> syncPendingExpenses({required String ownerId}) async {
     if (!_syncEnabled) return;
     if (_syncDisabledMissingDb) return;
     if (Firebase.apps.isEmpty) return;
     final db = await _localDb.database;
     final rows = await db.query(
       'expenses',
-      where: 'pendingSync = ?',
-      whereArgs: [1],
+      where: 'ownerId = ? AND pendingSync = ?',
+      whereArgs: [ownerId, 1],
       orderBy: 'createdAt ASC',
     );
 
@@ -61,12 +64,13 @@ class ExpenseRepository {
           payerId: expense.payerId,
           participants: expense.participants,
           shares: expense.shares,
+          splitMethod: splitMethodToString(expense.splitMethod),
         );
         await db.update(
           'expenses',
           {'pendingSync': 0},
-          where: 'id = ?',
-          whereArgs: [expense.id],
+          where: 'ownerId = ? AND id = ?',
+          whereArgs: [ownerId, expense.id],
         );
       } on FirebaseException catch (e) {
         if (e.code == 'not-found' ||
@@ -80,5 +84,27 @@ class ExpenseRepository {
         break;
       }
     }
+  }
+
+  Future<void> updateExpense(LocalExpense expense) async {
+    final db = await _localDb.database;
+    await db.update(
+      'expenses',
+      expense.toDbMap(),
+      where: 'ownerId = ? AND id = ?',
+      whereArgs: [expense.ownerId, expense.id],
+    );
+  }
+
+  Future<void> deleteExpense({
+    required String ownerId,
+    required String id,
+  }) async {
+    final db = await _localDb.database;
+    await db.delete(
+      'expenses',
+      where: 'ownerId = ? AND id = ?',
+      whereArgs: [ownerId, id],
+    );
   }
 }

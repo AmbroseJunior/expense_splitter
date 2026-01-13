@@ -61,7 +61,7 @@ class GroupListScreen extends StatelessWidget {
                   child: const Text("Cancel"),
                 ),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final name = nameCtrl.text.trim();
                     if (name.isEmpty) return;
 
@@ -72,7 +72,7 @@ class GroupListScreen extends StatelessWidget {
                             .where((u) => selectedIds.contains(u.id))
                             .toList();
 
-                    store.addGroup(name: name, members: members);
+                    await store.addGroup(name: name, members: members);
                     Navigator.pop(context);
                   },
                   child: const Text("Create"),
@@ -142,7 +142,7 @@ class GroupListScreen extends StatelessWidget {
                   child: const Text("Cancel"),
                 ),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final newName = nameCtrl.text.trim();
                     if (newName.isEmpty) return;
 
@@ -159,7 +159,7 @@ class GroupListScreen extends StatelessWidget {
                       return;
                     }
 
-                    store.updateGroup(
+                    await store.updateGroup(
                       groupId: groupId,
                       name: newName,
                       members: members,
@@ -201,7 +201,7 @@ class GroupListScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      store.deleteGroup(groupId);
+      await store.deleteGroup(groupId);
     }
   }
 
@@ -242,7 +242,7 @@ class GroupListScreen extends StatelessWidget {
                   Text("Members: ${g.members.map((m) => m.name).join(", ")}"),
 
               trailing: PopupMenuButton<String>(
-                onSelected: (v) {
+                onSelected: (v) async {
                   if (v == 'open') {
                     Navigator.push(
                       context,
@@ -253,7 +253,7 @@ class GroupListScreen extends StatelessWidget {
                   } else if (v == 'edit') {
                     _showEditGroupDialog(context, g.id);
                   } else if (v == 'delete') {
-                    _confirmDeleteGroup(context, g.id);
+                    await _confirmDeleteGroup(context, g.id);
                   }
                 },
                 itemBuilder: (_) => const [

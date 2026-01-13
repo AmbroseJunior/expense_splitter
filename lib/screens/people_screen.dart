@@ -34,7 +34,7 @@ class PeopleScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      store.addUser(ctrl.text);
+      await store.addUser(ctrl.text);
     }
   }
 
@@ -65,7 +65,7 @@ class PeopleScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      store.renameUser(user.id, ctrl.text);
+      await store.renameUser(user.id, ctrl.text);
     }
   }
 
@@ -91,7 +91,7 @@ class PeopleScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      final success = store.deleteUser(user.id);
+      final success = await store.deleteUser(user.id);
       if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

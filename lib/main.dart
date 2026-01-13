@@ -43,6 +43,11 @@ class ExpenseSplitterApp extends StatelessWidget {
       ],
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
+          final store = context.read<ExpenseStore>();
+          final ownerId = auth.user?.uid ?? 'local';
+          final displayName = auth.user?.displayName;
+          store.ensureLoaded(ownerId, displayName: displayName);
+
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Expense Splitter',

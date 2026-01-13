@@ -68,7 +68,7 @@ class GroupDetailsScreen extends StatelessWidget {
                   child: const Text("Cancel"),
                 ),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final newName = nameCtrl.text.trim();
                     if (newName.isEmpty) return;
 
@@ -84,8 +84,11 @@ class GroupDetailsScreen extends StatelessWidget {
                       return;
                     }
 
-                    store.updateGroup(
-                        groupId: groupId, name: newName, members: members);
+                    await store.updateGroup(
+                      groupId: groupId,
+                      name: newName,
+                      members: members,
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text("Save"),
@@ -122,7 +125,7 @@ class GroupDetailsScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      store.deleteGroup(groupId);
+      await store.deleteGroup(groupId);
       Navigator.pop(context);
     }
   }
@@ -154,8 +157,8 @@ class GroupDetailsScreen extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () {
-                          store.addUser(newUserCtrl.text);
+                        onPressed: () async {
+                          await store.addUser(newUserCtrl.text);
                           newUserCtrl.clear();
                           setState(() {});
                         },
@@ -174,11 +177,11 @@ class GroupDetailsScreen extends StatelessWidget {
                           return ListTile(
                             title: Text(u.name),
                             trailing: PopupMenuButton<String>(
-                              onSelected: (v) {
+                              onSelected: (v) async {
                                 if (v == 'rename') {
                                   _showRenameUserDialog(context, u);
                                 } else if (v == 'delete') {
-                                  final ok = store.deleteUser(u.id);
+                                  final ok = await store.deleteUser(u.id);
                                   if (!ok) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -236,8 +239,8 @@ class GroupDetailsScreen extends StatelessWidget {
             child: const Text("Cancel"),
           ),
           FilledButton(
-            onPressed: () {
-              store.renameUser(user.id, ctrl.text);
+            onPressed: () async {
+              await store.renameUser(user.id, ctrl.text);
               Navigator.pop(context);
             },
             child: const Text("Save"),
@@ -271,7 +274,7 @@ class GroupDetailsScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      context.read<ExpenseStore>().deleteExpenseFromGroup(
+      await context.read<ExpenseStore>().deleteExpenseFromGroup(
             groupId: groupId,
             expenseId: expenseId,
           );

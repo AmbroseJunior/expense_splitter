@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:expense_splitter/providers/auth_provider.dart';
+
+import '../providers/auth_provider.dart';
 import 'group_list_screen.dart';
+import 'people_screen.dart';
+import 'summary_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
   final bool localOnly;
@@ -29,7 +32,6 @@ class DashboardScreen extends StatelessWidget {
                   icon: const Icon(Icons.logout),
                   onPressed: () async {
                     await auth.logout();
-                    // main.dart auth listener will redirect to LoginScreen
                   },
                 ),
               ],
@@ -39,23 +41,15 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 👋 Greeting
             Text(
-              "Hello $displayName 👋",
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
+              "Hello $displayName",
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 6),
-
             Text(
               "What would you like to do today?",
               style: TextStyle(fontSize: 16, color: Colors.grey[700]),
             ),
-
-            // ⚠️ Guest warning
             if (user?.isAnonymous == true) ...[
               const SizedBox(height: 16),
               Container(
@@ -73,7 +67,6 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-
             if (localOnly) ...[
               const SizedBox(height: 16),
               Container(
@@ -91,51 +84,36 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-
-            const SizedBox(height: 30),
-
-            // 📁 Groups
+            const SizedBox(height: 20),
             DashboardButton(
-              icon: Icons.group,
-              label: "View Your Groups",
+              icon: Icons.people,
+              label: "Manage People",
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const GroupListScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const PeopleScreen()),
                 );
               },
             ),
-
             const SizedBox(height: 20),
-
-            // ➕ Expense
             DashboardButton(
               icon: Icons.add_card,
               label: "Add New Expense",
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const GroupListScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const GroupListScreen()),
                 );
               },
             ),
-
             const SizedBox(height: 40),
-
-            // 📊 Summary placeholder
             const Text(
               "Summary Overview",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 12),
-
             Container(
-              height: 140,
+              height: 180,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -148,17 +126,9 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Center(
-                child: Text(
-                  "📊 Chart Coming Soon",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ),
+              child: const SummaryChart(),
             ),
-
             const Spacer(),
-
-            // 🔻 Footer
             const Center(
               child: Text(
                 "Powered By: expense_splitter 2025",
@@ -190,9 +160,7 @@ class DashboardButton extends StatelessWidget {
       width: double.infinity,
       child: Card(
         elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: onTap,
@@ -206,11 +174,7 @@ class DashboardButton extends StatelessWidget {
                     color: const Color(0xFF0097A7).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 32,
-                    color: const Color(0xFF006A6A),
-                  ),
+                  child: Icon(icon, size: 32, color: const Color(0xFF006A6A)),
                 ),
                 const SizedBox(width: 20),
                 Expanded(

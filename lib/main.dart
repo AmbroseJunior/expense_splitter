@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'theme.dart';
 import 'services/expense_repository.dart';
+import 'state/expense_store.dart';
+import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,8 +34,13 @@ class ExpenseSplitterApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<AuthProvider>(
-      create: (_) => AuthProvider(enableFirebase: firebaseAvailable),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ExpenseStore()),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(enableFirebase: firebaseAvailable),
+        ),
+      ],
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           return MaterialApp(

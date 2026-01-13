@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-import '../models/expense.dart';
+import '../models/local_expense.dart';
 import 'firestore_service.dart';
 import 'local_db.dart';
 
@@ -19,7 +19,7 @@ class ExpenseRepository {
     _syncEnabled = enabled;
   }
 
-  Future<List<Expense>> listExpenses({required String groupId}) async {
+  Future<List<LocalExpense>> listExpenses({required String groupId}) async {
     final db = await _localDb.database;
     final rows = await db.query(
       'expenses',
@@ -27,10 +27,10 @@ class ExpenseRepository {
       whereArgs: [groupId],
       orderBy: 'createdAt DESC',
     );
-    return rows.map(Expense.fromDbMap).toList();
+    return rows.map(LocalExpense.fromDbMap).toList();
   }
 
-  Future<int> addExpense(Expense expense, {bool trySync = true}) async {
+  Future<int> addExpense(LocalExpense expense, {bool trySync = true}) async {
     final db = await _localDb.database;
     final id = await db.insert('expenses', expense.toDbMap());
     if (trySync && _syncEnabled) {
@@ -52,7 +52,7 @@ class ExpenseRepository {
     );
 
     for (final row in rows) {
-      final expense = Expense.fromDbMap(row);
+      final expense = LocalExpense.fromDbMap(row);
       try {
         await _remote.addExpense(
           groupId: expense.groupId,

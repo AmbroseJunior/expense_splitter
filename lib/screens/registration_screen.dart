@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:expense_splitter/providers/auth_provider.dart';
-import 'package:expense_splitter/widgets/ui_feedback.dart';
-import 'login_screen.dart';
+
+import '../providers/auth_provider.dart';
+import '../screens/dashboard_screen.dart';
+import '../screens/login_screen.dart';
+import '../widgets/ui_feedback.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -12,13 +14,14 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
+  final nameCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
   final confirmCtrl = TextEditingController();
-  final nameCtrl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
@@ -31,25 +34,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.person_add,
                     size: 80,
-                    color: Color(0xFF006A6A),
+                    color: cs.primary,
                   ),
                   const SizedBox(height: 20),
                   Text(
                     "Join Smart Expense Splitter",
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF006A6A),
+                          color: cs.primary,
                         ),
                   ),
+                  const SizedBox(height: 30),
                   TextField(
                     controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: "Full Name"),
+                    decoration: const InputDecoration(labelText: "Name"),
                   ),
                   const SizedBox(height: 16),
-                  const SizedBox(height: 30),
                   TextField(
                     controller: emailCtrl,
                     decoration: const InputDecoration(labelText: "Email"),
@@ -72,84 +75,61 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: cs.primary,
+                        foregroundColor: Colors.white,
+                      ),
                       onPressed: auth.isLoading
                           ? null
                           : () async {
-                              if (nameCtrl.text.isEmpty ||
-                                  emailCtrl.text.isEmpty ||
-                                  passCtrl.text.isEmpty ||
-                                  confirmCtrl.text.isEmpty) {
-                                UIFeedback.showSnack(
-                                  context,
-                                  "All fields are required.",
-                                );
-                                return;
-                              }
-
-                              if (passCtrl.text.length < 6) {
-                                UIFeedback.showSnack(
-                                  context,
-                                  "Password must be at least 6 characters.",
-                                );
-                                return;
-                              }
-
                               if (passCtrl.text != confirmCtrl.text) {
-                                UIFeedback.showSnack(
+                                UIFeedback.showDialogBox(
                                   context,
-                                  "Passwords do not match.",
+                                  title: "Passwords do not match",
+                                  message:
+                                      "Please make sure both passwords are the same.",
                                 );
                                 return;
                               }
 
                               await auth.register(
-                                nameCtrl.text,
-                                emailCtrl.text,
+                                nameCtrl.text.trim(),
+                                emailCtrl.text.trim(),
                                 passCtrl.text,
                               );
 
-                              if (auth.error == null) {
-                                UIFeedback.showSnack(
-                                  context,
-                                  "Registration successful! Please log in.",
-                                );
-
-                                await auth.logoutAfterRegister();
-
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const LoginScreen(),
-                                  ),
-                                );
-                              } else {
+                              if (auth.error != null) {
                                 UIFeedback.showDialogBox(
                                   context,
                                   title: "Registration Failed",
                                   message: auth.error!,
                                 );
+                                return;
+                              }
+
+                              if (mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const DashboardScreen(),
+                                  ),
+                                );
                               }
                             },
-                      child: auth.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text("Create Account"),
+                      child: const Text("Create Account"),
                     ),
                   ),
-                  const SizedBox(height: 10),
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
-                    child: const Text("Already have an account? Login"),
+                    child: Text(
+                      "Already have an account? Login",
+                      style: TextStyle(color: cs.primary),
+                    ),
                   ),
                 ],
               ),

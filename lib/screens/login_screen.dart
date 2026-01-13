@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:expense_splitter/providers/auth_provider.dart';
-import 'package:expense_splitter/screens/registration_screen.dart';
-import 'package:expense_splitter/screens/dashboard_screen.dart';
-import 'package:expense_splitter/widgets/ui_feedback.dart';
-import 'package:expense_splitter/services/expense_repository.dart';
+
+import '../providers/auth_provider.dart';
+import '../screens/dashboard_screen.dart';
+import '../screens/registration_screen.dart';
+import '../services/expense_repository.dart';
+import '../widgets/ui_feedback.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
@@ -27,15 +29,24 @@ class _LoginScreenState extends State<LoginScreen> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                // LOGO
                 Container(
                   padding: const EdgeInsets.all(28),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
-                      colors: [Color(0xFF0097A7), Color(0xFF006A6A)],
+                      colors: [cs.secondary, cs.primary],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 12,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.receipt_long,
@@ -43,34 +54,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     size: 70,
                   ),
                 ),
-
                 const SizedBox(height: 25),
-
                 Text(
                   "Smart Expense Splitter",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF006A6A),
+                        color: cs.primary,
                       ),
                 ),
-
                 const SizedBox(height: 35),
-
                 TextField(
                   controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: "Email"),
+                  decoration: const InputDecoration(
+                    labelText: "Email",
+                    filled: true,
+                  ),
                 ),
                 const SizedBox(height: 16),
-
                 TextField(
                   controller: passCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: "Password"),
+                  decoration: const InputDecoration(
+                    labelText: "Password",
+                    filled: true,
+                  ),
                 ),
-
-                const SizedBox(height: 20),
-
-                // REGISTER LINK
+                const SizedBox(height: 30),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -80,29 +89,32 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     );
                   },
-                  child: const Text("Don't have an account? Register"),
+                  child: Text(
+                    "Don't have an account? Register",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: cs.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-
-                const SizedBox(height: 10),
-
-                // LOGIN BUTTON
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
                     onPressed: auth.isLoading
                         ? null
                         : () async {
-                            if (emailCtrl.text.isEmpty ||
-                                passCtrl.text.isEmpty) {
-                              UIFeedback.showSnack(
-                                context,
-                                "Please fill in all fields.",
-                              );
-                              return;
-                            }
-
                             await auth.login(
-                              emailCtrl.text,
+                              emailCtrl.text.trim(),
                               passCtrl.text,
                             );
 
@@ -114,18 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               );
                             }
                           },
-                    child: auth.isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text("Login"),
+                    child: const Text("Login"),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.login),
                   label: const Text("Sign in with Google"),
@@ -176,6 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                   child: const Text("Continue offline (SQLite only)"),
                 ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

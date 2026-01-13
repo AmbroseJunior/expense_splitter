@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildTheme() {
-  const primaryColor = Color(0xFF006A6A);
-  const secondaryColor = Color(0xFF0097A7);
-  const backgroundColor = Color(0xFFF7F9F9);
+  const primaryColor = Color(0xFF674DE7); 
+  const secondaryColor = Color(0xFF8B7BFF);
+  const backgroundColor = Color(0xFFF6F5FF);
 
   return ThemeData(
     useMaterial3: true,

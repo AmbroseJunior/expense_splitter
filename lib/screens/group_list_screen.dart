@@ -1,3 +1,4 @@
+import 'package:expense_splitter/state/expense_store.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,8 +29,9 @@ class GroupListScreen extends StatelessWidget {
                     children: [
                       TextField(
                         controller: nameCtrl,
-                        decoration:
-                            const InputDecoration(labelText: "Group name"),
+                        decoration: const InputDecoration(
+                          labelText: "Group name",
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Text("Members:"),
@@ -69,8 +71,8 @@ class GroupListScreen extends StatelessWidget {
                     final members = selectedIds.isEmpty
                         ? store.users
                         : store.users
-                            .where((u) => selectedIds.contains(u.id))
-                            .toList();
+                              .where((u) => selectedIds.contains(u.id))
+                              .toList();
 
                     store.addGroup(name: name, members: members);
                     Navigator.pop(context);
@@ -91,8 +93,7 @@ class GroupListScreen extends StatelessWidget {
     if (group == null) return;
 
     final nameCtrl = TextEditingController(text: group.name);
-    final Set<String> selectedIds =
-        group.members.map((m) => m.id).toSet();
+    final Set<String> selectedIds = group.members.map((m) => m.id).toSet();
 
     showDialog(
       context: context,
@@ -109,8 +110,9 @@ class GroupListScreen extends StatelessWidget {
                     children: [
                       TextField(
                         controller: nameCtrl,
-                        decoration:
-                            const InputDecoration(labelText: "Group name"),
+                        decoration: const InputDecoration(
+                          labelText: "Group name",
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Text("Members:"),
@@ -235,11 +237,14 @@ class GroupListScreen extends StatelessWidget {
               ),
               title: Text(
                 g.name,
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
-              subtitle:
-                  Text("Members: ${g.members.map((m) => m.name).join(", ")}"),
+              subtitle: Text(
+                "Members: ${g.members.map((m) => m.name).join(", ")}",
+              ),
 
               trailing: PopupMenuButton<String>(
                 onSelected: (v) {

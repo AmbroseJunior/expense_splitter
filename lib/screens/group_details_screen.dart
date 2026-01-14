@@ -35,8 +35,9 @@ class GroupDetailsScreen extends StatelessWidget {
                     children: [
                       TextField(
                         controller: nameCtrl,
-                        decoration:
-                            const InputDecoration(labelText: "Group name"),
+                        decoration: const InputDecoration(
+                          labelText: "Group name",
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Text("Members:"),
@@ -68,7 +69,7 @@ class GroupDetailsScreen extends StatelessWidget {
                   child: const Text("Cancel"),
                 ),
                 FilledButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final newName = nameCtrl.text.trim();
                     if (newName.isEmpty) return;
 
@@ -79,14 +80,19 @@ class GroupDetailsScreen extends StatelessWidget {
                     if (members.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text("Select at least 1 member")),
+                          content: Text("Select at least 1 member"),
+                        ),
                       );
                       return;
                     }
 
                     store.updateGroup(
-                        groupId: groupId, name: newName, members: members);
-                    Navigator.pop(context);
+                      groupId: groupId,
+                      name: newName,
+                      members: members,
+                    );
+
+                    if (context.mounted) Navigator.pop(context);
                   },
                   child: const Text("Save"),
                 ),
@@ -123,7 +129,7 @@ class GroupDetailsScreen extends StatelessWidget {
 
     if (ok == true) {
       store.deleteGroup(groupId);
-      Navigator.pop(context);
+      if (context.mounted) Navigator.pop(context);
     }
   }
 
@@ -154,7 +160,7 @@ class GroupDetailsScreen extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () {
+                        onPressed: () async {
                           store.addUser(newUserCtrl.text);
                           newUserCtrl.clear();
                           setState(() {});
@@ -174,16 +180,17 @@ class GroupDetailsScreen extends StatelessWidget {
                           return ListTile(
                             title: Text(u.name),
                             trailing: PopupMenuButton<String>(
-                              onSelected: (v) {
+                              onSelected: (v) async {
                                 if (v == 'rename') {
                                   _showRenameUserDialog(context, u);
                                 } else if (v == 'delete') {
-                                  final ok = store.deleteUser(u.id);
+                                  final ok = await store.deleteUser(u.id);
                                   if (!ok) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text(
-                                            "Cannot delete: user paid at least one expense."),
+                                          "Cannot delete: user paid at least one expense.",
+                                        ),
                                       ),
                                     );
                                   } else {
@@ -193,9 +200,13 @@ class GroupDetailsScreen extends StatelessWidget {
                               },
                               itemBuilder: (_) => const [
                                 PopupMenuItem(
-                                    value: 'rename', child: Text("Rename")),
+                                  value: 'rename',
+                                  child: Text("Rename"),
+                                ),
                                 PopupMenuItem(
-                                    value: 'delete', child: Text("Delete")),
+                                  value: 'delete',
+                                  child: Text("Delete"),
+                                ),
                               ],
                             ),
                           );
@@ -236,9 +247,9 @@ class GroupDetailsScreen extends StatelessWidget {
             child: const Text("Cancel"),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               store.renameUser(user.id, ctrl.text);
-              Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             },
             child: const Text("Save"),
           ),
@@ -272,9 +283,9 @@ class GroupDetailsScreen extends StatelessWidget {
 
     if (ok == true) {
       context.read<ExpenseStore>().deleteExpenseFromGroup(
-            groupId: groupId,
-            expenseId: expenseId,
-          );
+        groupId: groupId,
+        expenseId: expenseId,
+      );
     }
   }
 
@@ -338,39 +349,47 @@ class GroupDetailsScreen extends StatelessWidget {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
+
           if (expenses.isEmpty)
             const Padding(
               padding: EdgeInsets.only(top: 12, bottom: 20),
               child: Text("No expenses yet."),
             ),
-          ...expenses.map((e) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GestureDetector(
-                  onLongPress: () => _confirmDeleteExpense(
-                    context,
-                    expenseId: e.id,
-                    title: e.title,
-                  ),
-                  child: ExpenseTile(
-                    title: e.title,
-                    amount: e.amount,
-                    payer: e.paidBy.name,
-                  ),
+
+          ...expenses.map(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GestureDetector(
+                onLongPress: () => _confirmDeleteExpense(
+                  context,
+                  expenseId: e.id,
+                  title: e.title,
                 ),
-              )),
+                child: ExpenseTile(
+                  title: e.title,
+                  amount: e.amount,
+                  payer: e.paidBy.name,
+                ),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 18),
           const Divider(),
           const SizedBox(height: 12),
+
           const Text(
             "Settlement",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
+
           const Text(
             "Net balances",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
+
           ...group.members.map((u) {
             final b = net[u.id] ?? 0.0;
             final sign = b >= 0 ? "+" : "";
@@ -386,19 +405,23 @@ class GroupDetailsScreen extends StatelessWidget {
               ),
             );
           }),
+
           const SizedBox(height: 8),
           const Divider(),
           const SizedBox(height: 10),
+
           const Text(
             "Who pays who",
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
+
           if (settlements.isEmpty)
             const Padding(
               padding: EdgeInsets.only(top: 10),
               child: Text("No settlements needed 🎉"),
             ),
+
           ...settlements.map((s) {
             return Card(
               child: ListTile(

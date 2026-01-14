@@ -12,6 +12,8 @@ class AppButton extends StatelessWidget {
     required this.onPressed,
     this.isPrimary = true,
     this.height = 48,
+    required IconData icon,
+    required String text,
   });
 
   @override

@@ -1,5 +1,7 @@
+import 'package:expense_splitter/state/expense_store.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -24,10 +26,9 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.register(name, email, password);
     } on FirebaseAuthException catch (e) {
-      // THIS gives real, human-readable messages
-      error = e.message ?? "Registration failed.";
+      error = e.message ?? "${e.code}: Registration failed.";
     } catch (e) {
-      error = "Unexpected error occurred.";
+      error = e.toString();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -42,32 +43,30 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.login(email, password);
     } on FirebaseAuthException catch (e) {
-      error = e.message ?? "Login failed.";
+      error = e.message ?? "${e.code}: Login failed.";
     } catch (e) {
-      error = "Unexpected error occurred.";
+      error = e.toString();
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> loginWithGoogle() async {
+  Future<void> signInWithGoogle() async {
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
       await _authService.signInWithGoogle();
+    } on FirebaseAuthException catch (e) {
+      error = e.message ?? "${e.code}: Google sign-in failed.";
     } catch (e) {
-      error = "Google sign-in failed.";
+      error = e.toString();
     } finally {
       isLoading = false;
       notifyListeners();
     }
-  }
-
-  Future<void> logoutAfterRegister() async {
-    await _authService.logout();
   }
 
   Future<void> loginAnonymously() async {
@@ -77,8 +76,10 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await _authService.signInAnonymously();
+    } on FirebaseAuthException catch (e) {
+      error = e.message ?? "${e.code}: Anonymous login failed.";
     } catch (e) {
-      error = "Anonymous login failed.";
+      error = e.toString();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -87,5 +88,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     await _authService.logout();
+    // IMPORTANT: notifyListeners triggers UI reset
+    notifyListeners();
   }
 }

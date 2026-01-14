@@ -1,51 +1,50 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildTheme() {
-  const primaryColor = Color(0xFF674DE7); 
-  const secondaryColor = Color(0xFF8B7BFF);
-  const backgroundColor = Color(0xFFF6F5FF);
+  const primaryGreen = Color(0xFF006A6A);
+  const secondaryGreen = Color(0xFF0097A7);
 
   return ThemeData(
     useMaterial3: true,
-
     colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryColor,
-      primary: primaryColor,
-      secondary: secondaryColor,
-      background: backgroundColor,
+      seedColor: primaryGreen,
+      primary: primaryGreen,
+      secondary: secondaryGreen,
     ),
 
-    scaffoldBackgroundColor: backgroundColor,
+    scaffoldBackgroundColor: const Color(0xFFF4F9F9),
 
     appBarTheme: const AppBarTheme(
-      backgroundColor: primaryColor,
+      backgroundColor: primaryGreen,
       foregroundColor: Colors.white,
-      elevation: 0,
+      elevation: 2,
       centerTitle: true,
+    ),
+
+    cardTheme: const CardThemeData(
+      color: Colors.white,
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
+    ),
+
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: primaryGreen,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+      ),
     ),
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
-    ),
-
-    cardTheme: CardThemeData(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
-
-    listTileTheme: ListTileThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ),
-
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
     ),
   );
 }

@@ -17,4 +17,3 @@ class Expense {
     required this.sharedWith,
   });
 }
-

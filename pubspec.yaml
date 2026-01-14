@@ -1,5 +1,5 @@
 name: expense_splitter
-description: "A new Flutter project."
+description: "Smart Expense Splitter - RVIR Project"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -11,14 +11,22 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # UI
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
   fl_chart: ^0.68.0
 
+  # 🔥 FIREBASE (REQUIRED)
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.0
+
+  # 🔐 AUTH PROVIDERS
+  google_sign_in: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^5.0.0
 
 flutter:

@@ -1,51 +1,84 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/auth_provider.dart';
 import 'group_list_screen.dart';
-import 'login_screen.dart';
-import 'add_expense_screen.dart';
-import 'summary_chart.dart';
 import 'people_screen.dart';
-
-
+import 'summary_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
+
+    const primary = Color(0xFF006A6A);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Welcome"),
+        title: const Text("Dashboard"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
+            onPressed: () async {
+              await auth.logout();
+              // ⛔ NO navigation here
+              // main.dart auth listener handles redirect
             },
           ),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Hello 👋",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
+            // 👋 Greeting
             Text(
-              "What would you like to do today?",
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              "Hello ${user?.displayName ?? 'Guest'} 👋",
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 20),
 
-            DashboardButton(
+            // 📊 Summary
+            const Text(
+              "Summary Overview",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 12),
+
+            Container(
+              height: 180,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const SummaryChart(),
+            ),
+
+            const SizedBox(height: 32),
+
+            // 👥 Groups
+            _DashboardCard(
+              icon: Icons.group,
+              label: "Your Groups & Expenses",
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GroupListScreen()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🧑 People
+            _DashboardCard(
               icon: Icons.people,
               label: "Manage People",
               onTap: () {
@@ -56,54 +89,12 @@ class DashboardScreen extends StatelessWidget {
               },
             ),
 
-
-            const SizedBox(height: 20),
-
-            DashboardButton(
-            icon: Icons.add_card,
-            label: "Add New Expense",
-                onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const GroupListScreen()),
-          );
-        },
-
-),
-
-
-            const SizedBox(height: 40),
-
-            const Text(
-              "Summary Overview",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-
-            Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const SummaryChart(),
-),
-
-
             const Spacer(),
 
             const Center(
               child: Text(
-                "Powered By: expense_splitter 2025",
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                "Powered by Expense Splitter · 2025",
+                style: TextStyle(color: Colors.grey),
               ),
             ),
           ],
@@ -113,13 +104,12 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-class DashboardButton extends StatelessWidget {
+class _DashboardCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
-  const DashboardButton({
-    super.key,
+  const _DashboardCard({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -127,39 +117,38 @@ class DashboardButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0097A7).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(icon, size: 32, color: const Color(0xFF006A6A)),
-                ),
-                const SizedBox(width: 20),
+    const primary = Color(0xFF006A6A);
 
-                Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, size: 28, color: primary),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
-            ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
           ),
         ),
       ),

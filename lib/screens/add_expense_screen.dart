@@ -5,7 +5,7 @@ import '../state/expense_store.dart';
 import '../models/user.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  final String groupId; // obvezno: dodajamo v določeno grupo
+  final String groupId;
   const AddExpenseScreen({super.key, required this.groupId});
 
   @override
@@ -26,6 +26,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     super.dispose();
   }
 
+  void _initDefaultsIfNeeded(List<AppUser> members) {
+    if (members.isEmpty) return;
+
+    payer ??= members.first;
+
+    // ✅ default share with everyone on first load (optional but nice UX)
+    if (selectedUserIds.isEmpty) {
+      for (final m in members) {
+        selectedUserIds.add(m.id);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ExpenseStore>();
@@ -38,7 +51,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       );
     }
 
-    payer ??= group.members.first;
+    _initDefaultsIfNeeded(group.members);
 
     return Scaffold(
       appBar: AppBar(title: Text("Add Expense (${group.name})")),
@@ -55,21 +68,32 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     children: [
                       TextField(
                         controller: titleCtrl,
-                        decoration: const InputDecoration(labelText: "Expense title"),
+                        decoration: const InputDecoration(
+                          labelText: "Expense title",
+                        ),
                       ),
                       const SizedBox(height: 16),
 
                       TextField(
                         controller: amountCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: "Amount (€)"),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: "Amount (€)",
+                        ),
                       ),
                       const SizedBox(height: 16),
 
                       DropdownButtonFormField<AppUser>(
                         value: payer,
                         items: group.members
-                            .map((u) => DropdownMenuItem(value: u, child: Text(u.name)))
+                            .map(
+                              (u) => DropdownMenuItem(
+                                value: u,
+                                child: Text(u.name),
+                              ),
+                            )
                             .toList(),
                         onChanged: (v) => setState(() => payer = v),
                         decoration: const InputDecoration(labelText: "Paid by"),
@@ -116,36 +140,51 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     final title = titleCtrl.text.trim();
-                    final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
+                    final amount = double.tryParse(
+                      amountCtrl.text.trim().replaceAll(',', '.'),
+                    );
 
                     if (title.isEmpty || amount == null || amount <= 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Enter valid title and amount")),
+                        const SnackBar(
+                          content: Text("Enter valid title and amount"),
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (payer == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Select who paid")),
                       );
                       return;
                     }
 
                     if (selectedUserIds.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Select at least one person")),
+                        const SnackBar(
+                          content: Text("Select at least one person"),
+                        ),
                       );
                       return;
                     }
 
-                    final sharedWith =
-                        group.members.where((u) => selectedUserIds.contains(u.id)).toList();
+                    final sharedWith = group.members
+                        .where((u) => selectedUserIds.contains(u.id))
+                        .toList();
 
                     context.read<ExpenseStore>().addExpenseToGroup(
-                          groupId: widget.groupId,
-                          title: title,
-                          amount: amount,
-                          date: DateTime.now(),
-                          paidBy: payer!,
-                          sharedWith: sharedWith,
-                        );
+                      groupId: widget.groupId,
+                      title: title,
+                      amount: amount,
+                      date: DateTime.now(),
+                      paidBy: payer!,
+                      sharedWith: sharedWith,
+                    );
 
+                    if (!mounted) return;
                     Navigator.pop(context);
                   },
                   child: const Text("Save Expense"),

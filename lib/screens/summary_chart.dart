@@ -26,7 +26,10 @@ class SummaryChart extends StatelessWidget {
     final net = calculateNet(store.users, expenses);
     final values = store.users.map((u) => net[u.id] ?? 0.0).toList();
 
-    final maxAbs = values.fold<double>(0.0, (m, v) => v.abs() > m ? v.abs() : m);
+    final maxAbs = values.fold<double>(
+      0.0,
+      (m, v) => v.abs() > m ? v.abs() : m,
+    );
     final bound = maxAbs == 0 ? 1.0 : maxAbs;
 
     return Padding(
@@ -39,11 +42,7 @@ class SummaryChart extends StatelessWidget {
           gridData: FlGridData(show: true, drawVerticalLine: false),
           extraLinesData: ExtraLinesData(
             horizontalLines: [
-              HorizontalLine(
-                y: 0,
-                strokeWidth: 1,
-                dashArray: [6, 6],
-              ),
+              HorizontalLine(y: 0, strokeWidth: 1, dashArray: [6, 6]),
             ],
           ),
           borderData: FlBorderData(show: false),
@@ -56,10 +55,14 @@ class SummaryChart extends StatelessWidget {
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   final i = value.toInt();
-                  if (i < 0 || i >= store.users.length) return const SizedBox.shrink();
+                  if (i < 0 || i >= store.users.length)
+                    return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Text(store.users[i].name, style: const TextStyle(fontSize: 12)),
+                    child: Text(
+                      store.users[i].name,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   );
                 },
               ),

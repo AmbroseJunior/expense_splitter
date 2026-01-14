@@ -5,23 +5,20 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // 🔹 Listen to auth state (login / logout)
-  Stream<User?> authStateChanges() {
-    return _auth.authStateChanges();
-  }
+  get error => null;
 
-  // 🔹 Email & Password Registration
+  Stream<User?> authStateChanges() => _auth.authStateChanges();
+
   Future<void> register(String name, String email, String password) async {
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password.trim(),
     );
 
-    await cred.user!.updateDisplayName(name);
+    await cred.user!.updateDisplayName(name.trim());
     await cred.user!.reload();
   }
 
-  // 🔹 Email & Password Login
   Future<void> login(String email, String password) async {
     await _auth.signInWithEmailAndPassword(
       email: email.trim(),
@@ -29,25 +26,34 @@ class AuthService {
     );
   }
 
-  // 🔹 Google Sign-In (WEB + ANDROID FIXED)
+  Future<void> signInAnonymously() async {
+    await _auth.signInAnonymously();
+  }
+
   Future<void> signInWithGoogle() async {
-    // 🌐 WEB (Firebase popup — REQUIRED)
+    // ✅ Web uses Firebase popup (NOT google_sign_in plugin)
     if (kIsWeb) {
-      final googleProvider = GoogleAuthProvider();
-      await _auth.signInWithPopup(googleProvider);
+      final provider = GoogleAuthProvider();
+      await _auth.signInWithPopup(provider);
       return;
     }
 
-    // 🤖 ANDROID / IOS (Google Play Services)
-    final googleSignIn = GoogleSignIn();
+    // ✅ Android/iOS uses google_sign_in plugin
+    final googleSignIn = GoogleSignIn(scopes: const ['email', 'profile']);
 
-    // 🔴 IMPORTANT: clear any cached session
-    await googleSignIn.signOut();
+    // 🔥 Fix "works once then never again"
+    // Clear previous session completely:
+    try {
+      await googleSignIn.signOut();
+      await googleSignIn.disconnect();
+    } catch (_) {}
 
     final googleUser = await googleSignIn.signIn();
-
     if (googleUser == null) {
-      throw Exception("Google sign-in cancelled");
+      throw FirebaseAuthException(
+        code: 'CANCELLED',
+        message: 'Google sign-in cancelled.',
+      );
     }
 
     final googleAuth = await googleUser.authentication;
@@ -60,16 +66,16 @@ class AuthService {
     await _auth.signInWithCredential(credential);
   }
 
-  // 🔹 Anonymous Login
-  Future<void> signInAnonymously() async {
-    await _auth.signInAnonymously();
-  }
-
-  // 🔹 Logout (ALL PLATFORMS)
   Future<void> logout() async {
     if (!kIsWeb) {
-      await GoogleSignIn().signOut();
+      final googleSignIn = GoogleSignIn();
+      try {
+        await googleSignIn.signOut();
+        await googleSignIn.disconnect();
+      } catch (_) {}
     }
     await _auth.signOut();
   }
+
+  Future<void> logoutAfterRegister() async {}
 }

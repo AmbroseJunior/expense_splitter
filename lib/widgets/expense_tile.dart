@@ -4,12 +4,14 @@ class ExpenseTile extends StatelessWidget {
   final String title;
   final double amount;
   final String payer;
+  final bool isPending;
 
   const ExpenseTile({
     super.key,
     required this.title,
     required this.amount,
     required this.payer,
+    this.isPending = false,
   });
 
   @override
@@ -29,7 +31,9 @@ class ExpenseTile extends StatelessWidget {
           title,
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
         ),
-        subtitle: Text("Paid by $payer"),
+        subtitle: Text(
+          isPending ? "Paid by $payer • Pending sync" : "Paid by $payer",
+        ),
         trailing: Text(
           "${amount.toStringAsFixed(2)}€",
           style: const TextStyle(

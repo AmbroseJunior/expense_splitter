@@ -34,7 +34,7 @@ class PeopleScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      store.addUser(ctrl.text);
+      await store.addUser(ctrl.text);
     }
   }
 
@@ -65,7 +65,7 @@ class PeopleScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      store.renameUser(user.id, ctrl.text);
+      await store.renameUser(user.id, ctrl.text);
     }
   }
 
@@ -91,14 +91,11 @@ class PeopleScreen extends StatelessWidget {
     );
 
     if (ok == true) {
-      final success = store.deleteUser(user.id);
-      // ignore: unrelated_type_equality_checks
-      if (success == false) {
+      final success = await store.deleteUser(user.id);
+      if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              "Cannot delete: this person paid at least one expense.",
-            ),
+            content: Text("Cannot delete: this person paid at least one expense."),
           ),
         );
       }
@@ -110,7 +107,9 @@ class PeopleScreen extends StatelessWidget {
     final store = context.watch<ExpenseStore>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("People")),
+      appBar: AppBar(
+        title: const Text("People"),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddPersonDialog(context),
         child: const Icon(Icons.person_add),
@@ -123,10 +122,7 @@ class PeopleScreen extends StatelessWidget {
           final u = store.users[i];
           return Card(
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 10,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               leading: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -137,10 +133,7 @@ class PeopleScreen extends StatelessWidget {
               ),
               title: Text(
                 u.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               trailing: PopupMenuButton<String>(
                 onSelected: (v) {
@@ -159,3 +152,4 @@ class PeopleScreen extends StatelessWidget {
     );
   }
 }
+

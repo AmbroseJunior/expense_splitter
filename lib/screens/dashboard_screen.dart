@@ -2,14 +2,86 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../state/expense_store.dart';
 import 'group_list_screen.dart';
+import 'login_screen.dart';
 import 'people_screen.dart';
 import 'summary_chart.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   final bool localOnly;
 
   const DashboardScreen({super.key, this.localOnly = false});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _prompted = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _maybePromptMigration();
+  }
+
+  Future<void> _maybePromptMigration() async {
+    if (_prompted) return;
+    if (widget.localOnly) return;
+
+    final auth = context.read<AuthProvider>();
+    final user = auth.user;
+    if (user == null || user.isAnonymous) return;
+
+    final store = context.read<ExpenseStore>();
+    final hasLocal = await store.hasLocalData();
+    if (!hasLocal || !mounted) return;
+
+    _prompted = true;
+    final action = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Local data found"),
+        content: const Text(
+          "You have local (offline) data. What do you want to do with it?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'cloud'),
+            child: const Text("Use cloud only"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'merge_keep'),
+            child: const Text("Merge"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'merge_delete'),
+            child: const Text("Merge + delete local"),
+          ),
+        ],
+      ),
+    );
+
+    if (action == null) return;
+    if (action == 'cloud') {
+      await store.clearLocalData();
+      return;
+    }
+    if (action == 'merge_keep') {
+      await store.migrateLocalData(
+        toOwnerId: user.uid,
+        deleteLocalAfter: false,
+      );
+      return;
+    }
+    if (action == 'merge_delete') {
+      await store.migrateLocalData(
+        toOwnerId: user.uid,
+        deleteLocalAfter: true,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +97,33 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Welcome"),
-        actions: localOnly
-            ? null
+        actions: widget.localOnly
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.login),
+                  tooltip: 'Back to Login',
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LoginScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ]
             : [
                 IconButton(
                   icon: const Icon(Icons.logout),
                   onPressed: () async {
                     await auth.logout();
+                    if (!mounted) return;
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LoginScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
@@ -67,7 +159,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-            if (localOnly) ...[
+            if (widget.localOnly) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -75,12 +167,29 @@ class DashboardScreen extends StatelessWidget {
                   color: Colors.blueGrey.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  "Local-only mode: data is saved in SQLite and sync is disabled.",
-                  style: TextStyle(
-                    color: Colors.blueGrey,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Local-only mode: data is saved in SQLite and sync is disabled.",
+                      style: TextStyle(
+                        color: Colors.blueGrey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text("Sign in to sync"),
+                    ),
+                  ],
                 ),
               ),
             ],

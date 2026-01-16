@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import '../providers/auth_provider.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/login_screen.dart';
+import '../services/expense_repository.dart';
 import '../widgets/ui_feedback.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -107,6 +109,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 return;
                               }
 
+                              ExpenseRepository.instance
+                                  .setSyncEnabled(Firebase.apps.isNotEmpty);
                               if (mounted) {
                                 Navigator.pushReplacement(
                                   context,

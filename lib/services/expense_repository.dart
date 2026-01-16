@@ -26,9 +26,9 @@ class ExpenseRepository {
     final db = await _localDb.database;
     final rows = await db.query(
       'expenses',
-      where: 'ownerId = ? AND groupId = ?',
-      whereArgs: [ownerId, groupId],
-      orderBy: 'createdAt DESC',
+      where: 'ownerId = ? AND groupId = ? AND deleted = ?',
+      whereArgs: [ownerId, groupId, 0],
+      orderBy: 'updatedAt DESC',
     );
     return rows.map(LocalExpense.fromDbMap).toList();
   }
@@ -51,21 +51,48 @@ class ExpenseRepository {
       'expenses',
       where: 'ownerId = ? AND pendingSync = ?',
       whereArgs: [ownerId, 1],
-      orderBy: 'createdAt ASC',
+      orderBy: 'updatedAt ASC',
     );
+    final userRows = await db.query(
+      'users',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: [ownerId, 0],
+    );
+    final userNames = {
+      for (final row in userRows) row['id'] as String: row['name'] as String
+    };
 
     for (final row in rows) {
       final expense = LocalExpense.fromDbMap(row);
       try {
-        await _remote.addExpense(
-          groupId: expense.groupId,
-          title: expense.title,
-          amount: expense.amount,
-          payerId: expense.payerId,
-          participants: expense.participants,
-          shares: expense.shares,
-          splitMethod: splitMethodToString(expense.splitMethod),
-        );
+        if (expense.deleted) {
+          await _remote.deleteExpense(
+            ownerId: ownerId,
+            groupId: expense.groupId,
+            expenseId: expense.id,
+            updatedAtMs: expense.updatedAt.millisecondsSinceEpoch,
+          );
+        } else {
+          final paidByName = userNames[expense.payerId] ?? '';
+          final paidBy = {'id': expense.payerId, 'name': paidByName};
+          final sharedWith = expense.participants
+              .map((id) => {'id': id, 'name': userNames[id] ?? ''})
+              .toList();
+          await _remote.upsertExpense(
+            ownerId: ownerId,
+            groupId: expense.groupId,
+            id: expense.id,
+            title: expense.title,
+            amount: expense.amount,
+            paidBy: paidBy,
+            sharedWith: sharedWith,
+            participants: expense.participants,
+            shares: expense.shares,
+            splitMethod: splitMethodToString(expense.splitMethod),
+            dateIso: expense.createdAt.toIso8601String(),
+            updatedAtMs: expense.updatedAt.millisecondsSinceEpoch,
+          );
+        }
         await db.update(
           'expenses',
           {'pendingSync': 0},

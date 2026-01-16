@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import '../providers/auth_provider.dart';
 import '../screens/dashboard_screen.dart';
@@ -118,11 +119,23 @@ class _LoginScreenState extends State<LoginScreen> {
                               passCtrl.text,
                             );
 
-                            if (auth.error != null) {
-                              UIFeedback.showDialogBox(
+                          if (auth.error != null) {
+                            UIFeedback.showDialogBox(
+                              context,
+                              title: "Login Failed",
+                              message: auth.error!,
+                            );
+                              return;
+                            }
+
+                            ExpenseRepository.instance
+                                .setSyncEnabled(Firebase.apps.isNotEmpty);
+                            if (mounted) {
+                              Navigator.pushReplacement(
                                 context,
-                                title: "Login Failed",
-                                message: auth.error!,
+                                MaterialPageRoute(
+                                  builder: (_) => const DashboardScreen(),
+                                ),
                               );
                             }
                           },
@@ -144,6 +157,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               title: "Google Login Failed",
                               message: auth.error!,
                             );
+                            return;
+                          }
+
+                          ExpenseRepository.instance
+                              .setSyncEnabled(Firebase.apps.isNotEmpty);
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const DashboardScreen(),
+                              ),
+                            );
                           }
                         },
                 ),
@@ -159,6 +184,16 @@ class _LoginScreenState extends State<LoginScreen> {
                               context,
                               title: "Guest Login Failed",
                               message: auth.error!,
+                            );
+                            return;
+                          }
+
+                          if (mounted) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const DashboardScreen(),
+                              ),
                             );
                           }
                         },

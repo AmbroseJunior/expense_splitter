@@ -44,8 +44,12 @@ class ExpenseSplitterApp extends StatelessWidget {
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           final store = context.read<ExpenseStore>();
-          final ownerId = auth.user?.uid ?? 'local';
+          final loggedIn =
+              auth.user != null && auth.user!.isAnonymous == false;
+          final ownerId = loggedIn ? auth.user!.uid : 'local';
           final displayName = auth.user?.displayName;
+          ExpenseRepository.instance
+              .setSyncEnabled(firebaseAvailable && loggedIn);
           store.ensureLoaded(ownerId, displayName: displayName);
 
           return MaterialApp(

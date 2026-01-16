@@ -337,6 +337,27 @@ class GroupDetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
+            "Members",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          if (group.members.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text("No members yet."),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: group.members
+                  .map((m) => Chip(label: Text(m.name)))
+                  .toList(),
+            ),
+          const SizedBox(height: 18),
+          const Divider(),
+          const SizedBox(height: 12),
+          const Text(
             "Expenses",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),

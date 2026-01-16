@@ -1,21 +1,27 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../models/expense.dart';
 import '../models/group.dart';
 import '../models/local_expense.dart';
 import '../models/user.dart';
 import '../services/expense_repository.dart';
+import '../services/firestore_service.dart';
 import '../services/local_db.dart';
 
 class ExpenseStore extends ChangeNotifier {
   final ExpenseRepository _repo;
+  final FirestoreService _remote;
   final LocalDb _localDb;
 
   ExpenseStore({
     ExpenseRepository? repo,
+    FirestoreService? remote,
     LocalDb? localDb,
   })  : _repo = repo ?? ExpenseRepository.instance,
+        _remote = remote ?? FirestoreService(),
         _localDb = localDb ?? LocalDb.instance;
 
   final List<AppUser> users = [];
@@ -38,6 +44,18 @@ class ExpenseStore extends ChangeNotifier {
   }
 
   Future<void> _load(String ownerId, {String? displayName}) async {
+    await _reloadFromDb(ownerId, displayName: displayName);
+    await _syncPendingAll(ownerId);
+    await _pullFromFirestore(ownerId);
+    await _syncPendingAll(ownerId);
+    _loading = false;
+    notifyListeners();
+  }
+
+  Future<void> _reloadFromDb(
+    String ownerId, {
+    String? displayName,
+  }) async {
     users.clear();
     _groups.clear();
     _expensesByGroupId.clear();
@@ -46,8 +64,8 @@ class ExpenseStore extends ChangeNotifier {
 
     final userRows = await db.query(
       'users',
-      where: 'ownerId = ?',
-      whereArgs: [ownerId],
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: [ownerId, 0],
       orderBy: 'name ASC',
     );
 
@@ -64,6 +82,9 @@ class ExpenseStore extends ChangeNotifier {
         'id': userId,
         'name': defaultName,
         'ownerId': ownerId,
+        'pendingSync': ownerId == 'local' ? 0 : 1,
+        'deleted': 0,
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
       });
       users.add(AppUser(id: userId, name: defaultName));
     }
@@ -72,9 +93,9 @@ class ExpenseStore extends ChangeNotifier {
 
     final groupRows = await db.query(
       'groups',
-      where: 'ownerId = ?',
-      whereArgs: [ownerId],
-      orderBy: 'createdAt DESC',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: [ownerId, 0],
+      orderBy: 'updatedAt DESC',
     );
 
     for (final row in groupRows) {
@@ -101,10 +122,6 @@ class ExpenseStore extends ChangeNotifier {
       _expensesByGroupId[groupId] =
           localExpenses.map((e) => _toUiExpense(e, userById)).toList();
     }
-
-    await _repo.syncPendingExpenses(ownerId: ownerId);
-    _loading = false;
-    notifyListeners();
   }
 
   Group? getGroupById(String groupId) {
@@ -179,6 +196,7 @@ class ExpenseStore extends ChangeNotifier {
     }
 
     final id = _newId('g');
+    final nowMs = _nowMs();
     final group = Group(id: id, name: clean, members: members);
     _groups.add(group);
     _expensesByGroupId.putIfAbsent(id, () => []);
@@ -190,7 +208,10 @@ class ExpenseStore extends ChangeNotifier {
       'id': id,
       'name': clean,
       'ownerId': ownerId,
-      'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'createdAt': nowMs,
+      'pendingSync': ownerId == 'local' ? 0 : 1,
+      'deleted': 0,
+      'updatedAt': nowMs,
     });
     for (final member in members) {
       await db.insert('group_members', {
@@ -215,6 +236,7 @@ class ExpenseStore extends ChangeNotifier {
     if (clean.isEmpty) return;
     if (members.isEmpty) return;
 
+    final nowMs = _nowMs();
     _groups[idx] = Group(id: groupId, name: clean, members: members);
 
     final deletes = <String>[];
@@ -265,7 +287,11 @@ class ExpenseStore extends ChangeNotifier {
     final db = await _localDb.database;
     await db.update(
       'groups',
-      {'name': clean},
+      {
+        'name': clean,
+        'pendingSync': ownerId == 'local' ? 0 : 1,
+        'updatedAt': nowMs,
+      },
       where: 'ownerId = ? AND id = ?',
       whereArgs: [ownerId, groupId],
     );
@@ -298,8 +324,13 @@ class ExpenseStore extends ChangeNotifier {
     notifyListeners();
 
     final db = await _localDb.database;
-    await db.delete(
+    await db.update(
       'groups',
+      {
+        'deleted': 1,
+        'pendingSync': ownerId == 'local' ? 0 : 1,
+        'updatedAt': _nowMs(),
+      },
       where: 'ownerId = ? AND id = ?',
       whereArgs: [ownerId, groupId],
     );
@@ -308,8 +339,13 @@ class ExpenseStore extends ChangeNotifier {
       where: 'groupId = ?',
       whereArgs: [groupId],
     );
-    await db.delete(
+    await db.update(
       'expenses',
+      {
+        'deleted': 1,
+        'pendingSync': ownerId == 'local' ? 0 : 1,
+        'updatedAt': _nowMs(),
+      },
       where: 'ownerId = ? AND groupId = ?',
       whereArgs: [ownerId, groupId],
     );
@@ -333,6 +369,7 @@ class ExpenseStore extends ChangeNotifier {
     }
 
     final id = _newId('e');
+    final nowMs = _nowMs();
     final normalizedShares = _normalizeShares(
       shares: shares,
       sharedWith: sharedWith,
@@ -367,7 +404,23 @@ class ExpenseStore extends ChangeNotifier {
 
     list.removeWhere((e) => e.id == expenseId);
     notifyListeners();
-    await _repo.deleteExpense(ownerId: ownerId, id: expenseId);
+    await _repo.updateExpense(
+      LocalExpense(
+        id: expenseId,
+        ownerId: ownerId,
+        groupId: groupId,
+        title: '',
+        amount: 0,
+        payerId: '',
+        participants: const [],
+        shares: const {},
+        splitMethod: SplitMethod.equal,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        pendingSync: ownerId == 'local' ? false : true,
+        deleted: true,
+      ),
+    );
   }
 
   Future<void> updateExpenseInGroup({
@@ -419,13 +472,21 @@ class ExpenseStore extends ChangeNotifier {
     if (clean.isEmpty) return;
 
     final id = _newId('u');
+    final nowMs = _nowMs();
     final user = AppUser(id: id, name: clean);
     users.add(user);
 
     notifyListeners();
 
     final db = await _localDb.database;
-    await db.insert('users', {'id': id, 'name': clean, 'ownerId': ownerId});
+    await db.insert('users', {
+      'id': id,
+      'name': clean,
+      'ownerId': ownerId,
+      'pendingSync': ownerId == 'local' ? 0 : 1,
+      'deleted': 0,
+      'updatedAt': nowMs,
+    });
   }
 
   Future<void> renameUser(String userId, String newName) async {
@@ -472,7 +533,11 @@ class ExpenseStore extends ChangeNotifier {
     final db = await _localDb.database;
     await db.update(
       'users',
-      {'name': clean},
+      {
+        'name': clean,
+        'pendingSync': ownerId == 'local' ? 0 : 1,
+        'updatedAt': _nowMs(),
+      },
       where: 'ownerId = ? AND id = ?',
       whereArgs: [ownerId, userId],
     );
@@ -532,15 +597,36 @@ class ExpenseStore extends ChangeNotifier {
     notifyListeners();
 
     for (final id in deletes) {
-      await _repo.deleteExpense(ownerId: ownerId, id: id);
+      await _repo.updateExpense(
+        LocalExpense(
+          id: id,
+          ownerId: ownerId,
+          groupId: _findGroupIdForExpense(id) ?? '',
+          title: '',
+          amount: 0,
+          payerId: '',
+          participants: const [],
+          shares: const {},
+          splitMethod: SplitMethod.equal,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          pendingSync: ownerId == 'local' ? false : true,
+          deleted: true,
+        ),
+      );
     }
     for (final expense in updates) {
       await _repo.updateExpense(_toLocalExpense(expense));
     }
 
     final db = await _localDb.database;
-    await db.delete(
+    await db.update(
       'users',
+      {
+        'deleted': 1,
+        'pendingSync': ownerId == 'local' ? 0 : 1,
+        'updatedAt': _nowMs(),
+      },
       where: 'ownerId = ? AND id = ?',
       whereArgs: [ownerId, userId],
     );
@@ -557,6 +643,7 @@ class ExpenseStore extends ChangeNotifier {
     final ownerId = _ownerId ?? 'local';
     final participants = expense.sharedWith.map((u) => u.id).toList();
     final shares = Map<String, double>.from(expense.shares);
+    final now = DateTime.now();
 
     return LocalExpense(
       id: expense.id,
@@ -569,7 +656,9 @@ class ExpenseStore extends ChangeNotifier {
       shares: shares,
       splitMethod: expense.splitMethod,
       createdAt: expense.date,
-      pendingSync: true,
+      updatedAt: now,
+      pendingSync: ownerId == 'local' ? false : true,
+      deleted: false,
     );
   }
 
@@ -598,5 +687,560 @@ class ExpenseStore extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  int _nowMs() => DateTime.now().millisecondsSinceEpoch;
+
+  Future<bool> hasLocalData() async {
+    final db = await _localDb.database;
+    final people = await db.query(
+      'users',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: ['local', 0],
+      limit: 1,
+    );
+    if (people.isNotEmpty) return true;
+    final groups = await db.query(
+      'groups',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: ['local', 0],
+      limit: 1,
+    );
+    if (groups.isNotEmpty) return true;
+    final expenses = await db.query(
+      'expenses',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: ['local', 0],
+      limit: 1,
+    );
+    return expenses.isNotEmpty;
+  }
+
+  Future<void> migrateLocalData({
+    required String toOwnerId,
+    required bool deleteLocalAfter,
+  }) async {
+    final db = await _localDb.database;
+    final nowMs = _nowMs();
+
+    final existingPeople = await db.query(
+      'users',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: [toOwnerId, 0],
+    );
+    final existingByName = <String, String>{
+      for (final row in existingPeople)
+        (row['name'] as String): (row['id'] as String)
+    };
+    final idMap = <String, String>{};
+
+    final localPeople = await db.query(
+      'users',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: ['local', 0],
+    );
+    for (final row in localPeople) {
+      final localId = row['id'] as String;
+      final name = row['name'] as String;
+      final existingId = existingByName[name];
+      if (existingId != null) {
+        idMap[localId] = existingId;
+        continue;
+      }
+      await db.insert(
+        'users',
+        {
+          'id': localId,
+          'name': name,
+          'ownerId': toOwnerId,
+          'pendingSync': 1,
+          'deleted': 0,
+          'updatedAt': nowMs,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      idMap[localId] = localId;
+    }
+
+    final localGroups = await db.query(
+      'groups',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: ['local', 0],
+    );
+    final localGroupIds = <String>[];
+    for (final row in localGroups) {
+      final groupId = row['id'] as String;
+      localGroupIds.add(groupId);
+      await db.insert(
+        'groups',
+        {
+          'id': groupId,
+          'name': row['name'],
+          'ownerId': toOwnerId,
+          'createdAt': row['createdAt'] ?? nowMs,
+          'pendingSync': 1,
+          'deleted': 0,
+          'updatedAt': nowMs,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      final members = await db.query(
+        'group_members',
+        where: 'groupId = ?',
+        whereArgs: [groupId],
+      );
+      for (final member in members) {
+        final mappedId = idMap[member['userId']] ?? member['userId'];
+        await db.insert(
+          'group_members',
+          {
+            'groupId': groupId,
+            'userId': mappedId,
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    }
+
+    final localExpenses = await db.query(
+      'expenses',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: ['local', 0],
+    );
+    for (final row in localExpenses) {
+      final rawParticipants = row['participants'] as String? ?? '[]';
+      final rawShares = row['shares'] as String? ?? '{}';
+      final participants = (jsonDecode(rawParticipants) as List)
+          .map((e) => e.toString())
+          .map((id) => idMap[id] ?? id)
+          .toList();
+      final shares = (jsonDecode(rawShares) as Map<String, dynamic>).map(
+        (key, value) => MapEntry(idMap[key] ?? key, (value as num).toDouble()),
+      );
+      final payerId = idMap[row['payerId']] ?? row['payerId'];
+      await db.insert(
+        'expenses',
+        {
+          ...row,
+          'ownerId': toOwnerId,
+          'payerId': payerId,
+          'participants': jsonEncode(participants),
+          'shares': jsonEncode(shares),
+          'pendingSync': 1,
+          'updatedAt': nowMs,
+          'deleted': 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await _dedupeGroups(toOwnerId);
+
+    if (deleteLocalAfter) {
+      for (final groupId in localGroupIds) {
+        final otherOwnerGroups = await db.query(
+          'groups',
+          where: 'id = ? AND ownerId != ? AND deleted = ?',
+          whereArgs: [groupId, 'local', 0],
+          limit: 1,
+        );
+        if (otherOwnerGroups.isEmpty) {
+          await db.delete(
+            'group_members',
+            where: 'groupId = ?',
+            whereArgs: [groupId],
+          );
+        }
+      }
+      await db.delete(
+        'users',
+        where: 'ownerId = ?',
+        whereArgs: ['local'],
+      );
+      await db.delete(
+        'groups',
+        where: 'ownerId = ?',
+        whereArgs: ['local'],
+      );
+      await db.delete(
+        'expenses',
+        where: 'ownerId = ?',
+        whereArgs: ['local'],
+      );
+    }
+
+    await _reloadFromDb(toOwnerId);
+    await _syncPendingAll(toOwnerId);
+    notifyListeners();
+  }
+
+  Future<void> clearLocalData() async {
+    final db = await _localDb.database;
+    final localGroups = await db.query(
+      'groups',
+      where: 'ownerId = ?',
+      whereArgs: ['local'],
+    );
+    for (final row in localGroups) {
+      final groupId = row['id'];
+      final otherOwnerGroups = await db.query(
+        'groups',
+        where: 'id = ? AND ownerId != ? AND deleted = ?',
+        whereArgs: [groupId, 'local', 0],
+        limit: 1,
+      );
+      if (otherOwnerGroups.isEmpty) {
+        await db.delete(
+          'group_members',
+          where: 'groupId = ?',
+          whereArgs: [groupId],
+        );
+      }
+    }
+    await db.delete('users', where: 'ownerId = ?', whereArgs: ['local']);
+    await db.delete('groups', where: 'ownerId = ?', whereArgs: ['local']);
+    await db.delete('expenses', where: 'ownerId = ?', whereArgs: ['local']);
+    notifyListeners();
+  }
+
+  Future<void> _syncPendingAll(String ownerId) async {
+    if (ownerId == 'local') return;
+    await _syncPendingPeople(ownerId);
+    await _syncPendingGroups(ownerId);
+    await _repo.syncPendingExpenses(ownerId: ownerId);
+  }
+
+  Future<void> _dedupeGroups(String ownerId) async {
+    final db = await _localDb.database;
+    final groups = await db.query(
+      'groups',
+      where: 'ownerId = ? AND deleted = ?',
+      whereArgs: [ownerId, 0],
+    );
+    if (groups.length < 2) return;
+
+    final nowMs = _nowMs();
+    final bestByKey = <String, Map<String, Object?>>{};
+    final duplicateToKeep = <String, String>{};
+
+    for (final row in groups) {
+      final groupId = row['id'] as String;
+      final name = row['name'] as String;
+      final membersRows = await db.query(
+        'group_members',
+        where: 'groupId = ?',
+        whereArgs: [groupId],
+      );
+      final memberIds =
+          membersRows.map((m) => m['userId'] as String).toList()
+            ..sort();
+      final key = '$name|${memberIds.join(",")}';
+      final expCount = Sqflite.firstIntValue(
+            await db.rawQuery(
+              'SELECT COUNT(*) FROM expenses WHERE ownerId = ? AND groupId = ? AND deleted = 0',
+              [ownerId, groupId],
+            ),
+          ) ??
+          0;
+      final updatedAt = row['updatedAt'] as int? ?? 0;
+
+      final existing = bestByKey[key];
+      if (existing == null) {
+        bestByKey[key] = {
+          'id': groupId,
+          'updatedAt': updatedAt,
+          'expCount': expCount,
+        };
+        continue;
+      }
+
+      final existingId = existing['id'] as String;
+      final existingExp = existing['expCount'] as int? ?? 0;
+      final existingUpdated = existing['updatedAt'] as int? ?? 0;
+      final keepExisting = (expCount < existingExp) ||
+          (expCount == existingExp && updatedAt <= existingUpdated);
+      if (keepExisting) {
+        duplicateToKeep[groupId] = existingId;
+      } else {
+        duplicateToKeep[existingId] = groupId;
+        bestByKey[key] = {
+          'id': groupId,
+          'updatedAt': updatedAt,
+          'expCount': expCount,
+        };
+      }
+    }
+
+    if (duplicateToKeep.isEmpty) return;
+
+    for (final entry in duplicateToKeep.entries) {
+      final dupId = entry.key;
+      final keepId = entry.value;
+      if (dupId == keepId) continue;
+      await db.update(
+        'expenses',
+        {
+          'groupId': keepId,
+          'pendingSync': ownerId == 'local' ? 0 : 1,
+          'updatedAt': nowMs,
+        },
+        where: 'ownerId = ? AND groupId = ?',
+        whereArgs: [ownerId, dupId],
+      );
+      await db.delete(
+        'group_members',
+        where: 'groupId = ?',
+        whereArgs: [dupId],
+      );
+      await db.update(
+        'groups',
+        {
+          'deleted': 1,
+          'pendingSync': ownerId == 'local' ? 0 : 1,
+          'updatedAt': nowMs,
+        },
+        where: 'ownerId = ? AND id = ?',
+        whereArgs: [ownerId, dupId],
+      );
+    }
+  }
+
+  Future<void> _syncPendingPeople(String ownerId) async {
+    try {
+      final db = await _localDb.database;
+      final rows = await db.query(
+        'users',
+        where: 'ownerId = ? AND pendingSync = ?',
+        whereArgs: [ownerId, 1],
+      );
+      for (final row in rows) {
+        final id = row['id'] as String;
+        final name = row['name'] as String;
+        final deleted = (row['deleted'] as int? ?? 0) == 1;
+        final updatedAtMs = row['updatedAt'] as int? ?? 0;
+        if (deleted) {
+          await _remote.deletePerson(
+            ownerId: ownerId,
+            id: id,
+            updatedAtMs: updatedAtMs,
+          );
+        } else {
+          await _remote.upsertPerson(
+            ownerId: ownerId,
+            id: id,
+            name: name,
+            deleted: false,
+            updatedAtMs: updatedAtMs,
+          );
+        }
+        await db.update(
+          'users',
+          {'pendingSync': 0},
+          where: 'ownerId = ? AND id = ?',
+          whereArgs: [ownerId, id],
+        );
+      }
+    } catch (_) {
+      // Ignore sync errors.
+    }
+  }
+
+  Future<void> _syncPendingGroups(String ownerId) async {
+    try {
+      final db = await _localDb.database;
+      final rows = await db.query(
+        'groups',
+        where: 'ownerId = ? AND pendingSync = ?',
+        whereArgs: [ownerId, 1],
+      );
+      for (final row in rows) {
+        final id = row['id'] as String;
+        final name = row['name'] as String;
+        final deleted = (row['deleted'] as int? ?? 0) == 1;
+        final updatedAtMs = row['updatedAt'] as int? ?? 0;
+        if (deleted) {
+          await _remote.deleteGroup(
+            ownerId: ownerId,
+            groupId: id,
+            updatedAtMs: updatedAtMs,
+          );
+        } else {
+          final membersRows = await db.query(
+            'group_members',
+            where: 'groupId = ?',
+            whereArgs: [id],
+          );
+          final memberIds =
+              membersRows.map((m) => m['userId'] as String).toList();
+          await _remote.upsertGroup(
+            ownerId: ownerId,
+            id: id,
+            name: name,
+            memberIds: memberIds,
+            deleted: false,
+            updatedAtMs: updatedAtMs,
+          );
+        }
+        await db.update(
+          'groups',
+          {'pendingSync': 0},
+          where: 'ownerId = ? AND id = ?',
+          whereArgs: [ownerId, id],
+        );
+      }
+    } catch (_) {
+      // Ignore sync errors.
+    }
+  }
+
+  Future<void> _pullFromFirestore(String ownerId) async {
+    if (ownerId == 'local') return;
+    try {
+      final db = await _localDb.database;
+      final people = await _remote.fetchPeople(ownerId);
+      for (final doc in people.docs) {
+        final data = doc.data();
+        final deleted = data['deleted'] == true;
+        final updatedAtMs = (data['updatedAtMs'] as int?) ?? 0;
+        final local = await db.query(
+          'users',
+          where: 'ownerId = ? AND id = ?',
+          whereArgs: [ownerId, doc.id],
+          limit: 1,
+        );
+        final localUpdatedAt = local.isEmpty
+            ? 0
+            : (local.first['updatedAt'] as int? ?? 0);
+        if (updatedAtMs < localUpdatedAt) continue;
+        await db.insert(
+          'users',
+          {
+            'id': doc.id,
+            'name': data['name'] ?? '',
+            'ownerId': ownerId,
+            'pendingSync': 0,
+            'deleted': deleted ? 1 : 0,
+            'updatedAt': updatedAtMs,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+
+      final groups = await _remote.fetchGroups(ownerId);
+      for (final doc in groups.docs) {
+        final data = doc.data();
+        final deleted = data['deleted'] == true;
+        final updatedAtMs = (data['updatedAtMs'] as int?) ?? 0;
+        final local = await db.query(
+          'groups',
+          where: 'ownerId = ? AND id = ?',
+          whereArgs: [ownerId, doc.id],
+          limit: 1,
+        );
+        final localUpdatedAt = local.isEmpty
+            ? 0
+            : (local.first['updatedAt'] as int? ?? 0);
+        if (updatedAtMs < localUpdatedAt) continue;
+        await db.insert(
+          'groups',
+          {
+            'id': doc.id,
+            'name': data['name'] ?? '',
+            'ownerId': ownerId,
+            'createdAt': updatedAtMs,
+            'pendingSync': 0,
+            'deleted': deleted ? 1 : 0,
+            'updatedAt': updatedAtMs,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        await db.delete(
+          'group_members',
+          where: 'groupId = ?',
+          whereArgs: [doc.id],
+        );
+
+        final inferredMemberIds = <String>{};
+        final expenses = await _remote.fetchExpenses(
+          ownerId: ownerId,
+          groupId: doc.id,
+        );
+        for (final exp in expenses.docs) {
+          final expData = exp.data();
+          final expDeleted = expData['deleted'] == true;
+          final expUpdatedAtMs = (expData['updatedAtMs'] as int?) ?? 0;
+          final localExp = await db.query(
+            'expenses',
+            where: 'ownerId = ? AND id = ?',
+            whereArgs: [ownerId, exp.id],
+            limit: 1,
+          );
+          final localExpUpdatedAt = localExp.isEmpty
+              ? 0
+              : (localExp.first['updatedAt'] as int? ?? 0);
+          if (expUpdatedAtMs < localExpUpdatedAt) continue;
+          final rawSharedWith = expData['sharedWith'];
+          final rawParticipants = expData['participants'];
+          List<String> participants = [];
+          if (rawParticipants is List) {
+            participants = rawParticipants.map((e) => e.toString()).toList();
+          } else if (rawSharedWith is List) {
+            participants = rawSharedWith
+                .map((e) => e is Map ? e['id']?.toString() : null)
+                .whereType<String>()
+                .toList();
+          }
+          inferredMemberIds.addAll(participants);
+          final payerId = (expData['paidById'] ??
+                  (expData['paidBy'] is Map
+                      ? (expData['paidBy'] as Map)['id']
+                      : '')) ??
+              '';
+          if (payerId.toString().isNotEmpty) {
+            inferredMemberIds.add(payerId.toString());
+          }
+          final sharesMap = (expData['shares'] as Map?)?.cast<String, dynamic>() ?? {};
+          await db.insert(
+            'expenses',
+            {
+              'id': exp.id,
+              'ownerId': ownerId,
+              'groupId': doc.id,
+              'title': expData['title'] ?? '',
+              'amount': (expData['amount'] as num?)?.toDouble() ?? 0.0,
+              'payerId': payerId.toString(),
+              'participants': jsonEncode(participants),
+              'shares': jsonEncode(
+                sharesMap.map(
+                  (key, value) => MapEntry(key, (value as num).toDouble()),
+                ),
+              ),
+              'splitMethod': expData['splitMethod'] ?? 'equal',
+              'createdAt': DateTime.tryParse(expData['date'] ?? '')
+                      ?.millisecondsSinceEpoch ??
+                  expUpdatedAtMs,
+              'updatedAt': expUpdatedAtMs,
+              'pendingSync': 0,
+              'deleted': expDeleted ? 1 : 0,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+
+        final memberIds = (data['memberIds'] as List?)?.cast<String>() ?? [];
+        final effectiveMemberIds =
+            memberIds.isNotEmpty ? memberIds : inferredMemberIds.toList();
+        for (final memberId in effectiveMemberIds) {
+          await db.insert('group_members', {
+            'groupId': doc.id,
+            'userId': memberId,
+          });
+        }
+      }
+      await _dedupeGroups(ownerId);
+      await _reloadFromDb(ownerId);
+    } catch (_) {
+      // Ignore pull errors; local data still works.
+    }
   }
 }

@@ -7,7 +7,7 @@ class LocalDb {
 
   static final LocalDb instance = LocalDb._();
   static const _dbName = 'expense_splitter.db';
-  static const _dbVersion = 2;
+  static const _dbVersion = 3;
 
   Database? _database;
 
@@ -35,6 +35,33 @@ class LocalDb {
           await db.execute('DROP TABLE IF EXISTS groups');
           await db.execute('DROP TABLE IF EXISTS users');
           await _createTables(db);
+          return;
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+            'ALTER TABLE users ADD COLUMN pendingSync INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            'ALTER TABLE users ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            'ALTER TABLE users ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            'ALTER TABLE groups ADD COLUMN pendingSync INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            'ALTER TABLE groups ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            'ALTER TABLE groups ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            'ALTER TABLE expenses ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            'ALTER TABLE expenses ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0',
+          );
         }
       },
     );
@@ -45,7 +72,10 @@ class LocalDb {
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        ownerId TEXT NOT NULL
+        ownerId TEXT NOT NULL,
+        pendingSync INTEGER NOT NULL,
+        deleted INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL
       )
     ''');
     await db.execute('''
@@ -53,7 +83,10 @@ class LocalDb {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         ownerId TEXT NOT NULL,
-        createdAt INTEGER NOT NULL
+        createdAt INTEGER NOT NULL,
+        pendingSync INTEGER NOT NULL,
+        deleted INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL
       )
     ''');
     await db.execute('''
@@ -75,7 +108,9 @@ class LocalDb {
         shares TEXT NOT NULL,
         splitMethod TEXT NOT NULL,
         createdAt INTEGER NOT NULL,
-        pendingSync INTEGER NOT NULL
+        updatedAt INTEGER NOT NULL,
+        pendingSync INTEGER NOT NULL,
+        deleted INTEGER NOT NULL
       )
     ''');
   }

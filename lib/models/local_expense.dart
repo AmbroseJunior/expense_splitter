@@ -36,7 +36,9 @@ class LocalExpense {
   final Map<String, double> shares;
   final SplitMethod splitMethod;
   final DateTime createdAt;
+  final DateTime updatedAt;
   final bool pendingSync;
+  final bool deleted;
 
   LocalExpense({
     required this.id,
@@ -49,7 +51,9 @@ class LocalExpense {
     required this.shares,
     required this.splitMethod,
     required this.createdAt,
+    required this.updatedAt,
     required this.pendingSync,
+    required this.deleted,
   });
 
   Map<String, dynamic> toDbMap() {
@@ -64,7 +68,9 @@ class LocalExpense {
       'shares': jsonEncode(shares),
       'splitMethod': splitMethodToString(splitMethod),
       'createdAt': createdAt.millisecondsSinceEpoch,
+      'updatedAt': updatedAt.millisecondsSinceEpoch,
       'pendingSync': pendingSync ? 1 : 0,
+      'deleted': deleted ? 1 : 0,
     };
   }
 
@@ -101,7 +107,11 @@ class LocalExpense {
       splitMethod: splitMethod,
       createdAt:
           DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int? ?? 0),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        map['updatedAt'] as int? ?? map['createdAt'] as int? ?? 0,
+      ),
       pendingSync: (map['pendingSync'] as int? ?? 0) == 1,
+      deleted: (map['deleted'] as int? ?? 0) == 1,
     );
   }
 }

@@ -22,9 +22,10 @@ Aplikacija uporablja:
    - [Kloniranje repozitorija](#kloniranje-repozitorija)  
    - [Nastavitev Firebase](#nastavitev-firebase)  
    - [Nastavitev SQLite](#nastavitev-sqlite)  
-   - [Zagon aplikacije](#zagon-aplikacije)  
-7. [Avtorji](#avtorji)  
-8. [Licenca](#licenca)
+   - [Zagon aplikacije](#zagon-aplikacije)
+7. [Blog](#blog)  
+8. [Avtorji](#avtorji)  
+9. [Licenca](#licenca)
 
 ---
 
@@ -174,6 +175,9 @@ https://console.firebase.google.com/
     flutter devices
     flutter run -d <device_id>
     ```
+## 📝 Blog
+👉 **Preveri naš blog:**  
+🔗 https://cloudy-tern-837.notion.site/Klyra-Smart-expense-splitter-2ec0639192fb8059a124ed90239e4d0f?pvs=143
 # 👨‍💻 Avtorji
 - Nnamdi Ambrose Junior Eze
 - Miha Čaks

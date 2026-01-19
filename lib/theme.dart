@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 ThemeData buildTheme() {
-  const primaryGreen = Color(0xFF006A6A);
+  const primaryColor = Color(0xFF674DE7);
   const secondaryGreen = Color(0xFF0097A7);
 
   return ThemeData(
@@ -48,3 +48,4 @@ ThemeData buildTheme() {
     ),
   );
 }
+

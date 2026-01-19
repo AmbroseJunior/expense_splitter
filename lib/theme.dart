@@ -7,15 +7,15 @@ ThemeData buildTheme() {
   return ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: primaryGreen,
-      primary: primaryGreen,
+      seedColor: primaryColor,
+      primary: primaryColor,
       secondary: secondaryGreen,
     ),
 
     scaffoldBackgroundColor: const Color(0xFFF4F9F9),
 
     appBarTheme: const AppBarTheme(
-      backgroundColor: primaryGreen,
+      backgroundColor: primaryColor,
       foregroundColor: Colors.white,
       elevation: 2,
       centerTitle: true,
@@ -31,7 +31,7 @@ ThemeData buildTheme() {
 
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: primaryGreen,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -48,4 +48,3 @@ ThemeData buildTheme() {
     ),
   );
 }
-
